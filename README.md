@@ -1,10 +1,10 @@
 # cc-my-pi-xs
 
+**简体中文** | [English](README.en.md)
+
 给 [Pi](https://pi.dev) 的个人定制 UI：**对话更紧凑、长输入可折叠、问答结果可回看、底栏可配置。**
 
 基于 [cc-my-pi 1.4.3](https://github.com/timvdhoorn/cc-my-pi/tree/v1.4.3) 的独立定制版，保留 Claude 风格入口，额外提供可选的 Devin 紧凑模式。**不会安装后自动切换到 Devin。**
-
-> English: A personal fork of cc-my-pi with optional Devin-style compact conversations, expandable long user messages, visible ask_user decisions, configurable footer icons, and live/final token-rate telemetry. Install from Git; this fork is not published to npm.
 
 ## 看效果
 
@@ -22,11 +22,32 @@
 
 超过 **8 个显示行**的用户消息，默认显示前 **6 行**及“展开剩余 N 行”。点击展开或收起。**只折叠显示，不裁剪模型接收的原文。**
 
-### 底栏与实时速度
+### 输入框与底栏完整布局
 
-![底栏实渲染示例：模型、订阅余量、上下文、实时和最终速度](assets/screenshots/footer-settings.png)
+![输入框、独立运行提示与底栏的完整布局：实时生成、生成结束和精简配置](assets/screenshots/editor-footer.png)
 
-不再单独显示工作区路径 / Git 分支行。模型、思考等级、订阅用量、上下文、费用、速度、缓存及扩展状态均可单独隐藏或修改图标。
+从上到下展示同一组虚构数据的三种状态：
+
+- **生成中：** 输入框上方保留独立 `Crafting…` 提示；下方底栏展示模型、思考等级、订阅余量与重置倒计时、上下文、费用、`≈` 实时速度、缓存命中和 MCP 状态。
+- **生成结束：** 独立运行提示结束，底栏速度变为 `均 … tok/s`，其余信息仍可回看。
+- **精简配置：** 通过逐项开关隐藏订阅、费用、缓存和扩展状态，只保留模型、思考等级、上下文与速度；不影响生成或统计。
+
+| 默认图标 | 信息 | 数据含义 |
+| --- | --- | --- |
+| `◇` | 模型 | 模型 ID，不重复显示 provider 前缀 |
+| `◈` | 思考等级 | 当前模型的 thinking level |
+| `◷` | Codex 订阅 | pi-usage 提供的剩余百分比、重置倒计时 |
+| `▣` | 上下文 | 使用比例、已用 token / 上下文窗口 |
+| `$` | 费用 | 当前会话分支累计的 provider 费用 |
+| `↯` | 速度 | 生成中估计值 `≈`；结束后 provider 用量计算的均值 `均` |
+| `↻` | 缓存 | 最近一次 assistant 请求的缓存读取占比；无缓存数据时不显示 |
+| `⌘` 等 | 扩展状态 | 已安装扩展提供的 MCP、记忆、后台终端等状态 |
+
+### 底栏设置与指标细节
+
+![底栏实渲染示例及逐项显隐、图标设置](assets/screenshots/footer-settings.png)
+
+不再单独显示工作区路径 / Git 分支行。通过 `/cc-my-pi footer`，模型、思考等级、订阅用量、上下文、费用、速度、缓存及扩展状态均可单独隐藏或修改图标。上述展示属于 **Pi 终端 TUI**；网页客户端不会自动继承这些终端组件。
 
 ## 相对上游增加 / 调整了什么
 

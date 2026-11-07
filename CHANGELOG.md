@@ -1,5 +1,12 @@
 # cc-my-pi-xs changes
 
+## Unreleased
+
+### Documentation
+- Add a complete English README with reciprocal language links and Git package coverage.
+- Show the actual input area, separate working indicator and footer together, including live, settled and minimal configurations, using synthetic data only.
+- Document footer fields, data sources and terminal-TUI scope. No runtime behavior changes.
+
 ## 1.4.3-xs.1 — initial independent fork
 
 Based on cc-my-pi 1.4.3. Original upstream history is retained below.
