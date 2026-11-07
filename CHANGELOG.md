@@ -1,0 +1,521 @@
+# cc-my-pi-xs changes
+
+## 1.4.3-xs.1 — initial independent fork
+
+Based on cc-my-pi 1.4.3. Original upstream history is retained below.
+
+### Added
+- Optional Devin compact conversation style with stable row spacing, dim tool summaries, read ranges/counts and colored edit statistics.
+- Long user-message folding: more than 8 rendered rows defaults to a 6-row preview; per-message click expansion and keyboard commands preserve the full source.
+- ask_user transcript details: questions, submitted answers and notes are visible by default; an integrated settings toggle disables the default display without preventing Ctrl+O expansion.
+- Per-item footer visibility and Unicode icon controls, integrated into /cc-my-pi.
+- Codex remaining usage/reset display reusing pi-usage status data; no duplicate account requests.
+- Live estimated and provider-usage-based final token-rate telemetry adapted from pi-open-tui 0.4.3.
+- Chinese documentation, synthetic-data PNG previews from actual components, focused regression tests, and complete package file coverage.
+
+### Changed
+- Hide the footer workspace/Git row and omit redundant provider prefixes from the model label.
+- Simplify edit/write/patch diffs to deletion-before-addition unified output without colored padding artifacts.
+- In Devin mode, suppress inline collapsed Thinking placeholders and keep the separate bottom working animation; Ctrl+T still reveals reasoning.
+- Rename package metadata to cc-my-pi-xs; Git-only distribution, private flag prevents accidental npm publication. Existing /cc-my-pi commands and user configuration paths remain compatible.
+
+### Preserved
+- Claude mode remains the default; no personal settings are imported or overwritten.
+- Tasks retain cc-my-pi 1.4.3 behavior; no task collapsing/footer navigation is added.
+- All original license notices, source attribution and upstream changelog history.
+
+---
+
+# Changelog
+
+> [!IMPORTANT]
+> **1.0.69 — package rename (permanent).** Canonical npm name is now [`pi-claude-code-ui`](https://www.npmjs.com/package/pi-claude-code-ui). `pi-claude-style-tools` is legacy and will not receive further releases. Install with `pi install npm:pi-claude-code-ui` or `npm i pi-claude-code-ui`.
+
+## [Unreleased]
+
+## [1.4.3] - 2026-10-25
+
+### Fixed
+
+- **No crash at exit in print/JSON mode** — the startup header no longer leaves a pending timer that reads an invalidated session after shutdown, so promptless `pi --print --mode json` exits 0 again. Pending header installation is cancelled on shutdown, reload or a new session, and print/JSON/RPC modes schedule no header work at all ([#11](https://github.com/timvdhoorn/cc-my-pi/issues/11), [#12](https://github.com/timvdhoorn/cc-my-pi/pull/12), thanks @NoGood).
+
+## [1.4.2] - 2026-10-11
+
+### Fixed
+
+- **Loads under Pi's installer again** — `pi install npm:cc-my-pi` no longer fails with `Cannot find module 'ioredis'` or `Cannot find module 'effect/Deferred'`. The git statusline imports only the Node services layer it uses, and the whole Effect package family is pinned to one version ([#5](https://github.com/timvdhoorn/cc-my-pi/issues/5)).
+- **No crash after reload, fork or session switch** — delayed editor installs no longer touch an invalidated session and can no longer exit the process ([#7](https://github.com/timvdhoorn/cc-my-pi/issues/7)).
+- **Git statusline stops cleanly after subagents** — background polling ends when an embedded session is disposed instead of logging `git-info background task defect` forever ([#3](https://github.com/timvdhoorn/cc-my-pi/issues/3), thanks @BeGild).
+- **Thinking stays visible when tools are grouped** — thinking follows Pi's own `Ctrl+T` / `hideThinkingBlock` setting and is never removed by tool grouping ([#9](https://github.com/timvdhoorn/cc-my-pi/pull/9), thanks @NoGood).
+
+### Changed
+
+- `typebox` is now a host-provided peer dependency; the stale `@sinclair/typebox` peer was removed.
+
+## [1.4.1] - 2026-08-10
+
+### Fixed
+
+- **Consistent tool result arms** — edit and diff results no longer sit one column left of every other tool's `⎿` arm (pi's built-in `edit` definition uses `renderShell: "self"`, which skips the one-column tool box padding — the override now forces the default shell), and the summary line (`+1 -1 at line 10`, `2 edits +9 -1`) is printed once instead of repeating under the diff.
+
+### Changed
+
+- **Cleaner extension statuses** — MCP now renders as `mcp 18 enabled` without plug icon, colon, or `servers`; MCP, memory, and caveman labels use statusline gray, while status values keep their existing colors and caveman levels render lowercase.
+
+## [1.4.0] - 2026-08-07
+
+### Added
+
+- **Built-in task tracking** — bundled and adapted `@tintinweb/pi-tasks` as one quiet persistent checklist above the editor, removing the need for a separate task package.
+- **Optional-extension installer** — first-run setup now offers recommended or custom paths and can install selected companion extensions directly through Pi.
+
+### Changed
+
+- **Claude-style tool calls by default** — each tool now renders as an individual call row with its result underneath; compact activity grouping remains opt-in.
+- **Stable running tool rows** — transient live output tails are now opt-in, preventing content from flashing before the final result appears. Fresh installs and setup previews share this default.
+- **Faster image paste presentation** — pasted images remain first-class attachments without repeatedly rendering expensive hover previews.
+- **More accurate statusline context** — context usage now follows Pi's current context accounting during long sessions and model changes.
+
+### Fixed
+
+- **Aligned result connectors** — tool results and pasted-image context now use one Claude-style `⎿` arm with continuation text aligned beneath it, instead of mixed `├`/`└` trees.
+- **Fresh-install consistency** — runtime defaults, setup wizard values, example configuration, and documentation now agree for tool grouping and live previews.
+
+## [1.3.3] - 2026-08-06
+
+### Fixed
+
+- **Pi v0.84 compatibility** — migrated streaming handlers to delta-only `message_update` events, finalized thinking metadata from authoritative `message_end` payloads, and prevented delayed editor hooks from accessing stale contexts after reload.
+
+### Changed
+
+- **Pi development baseline** — updated Pi development dependencies to v0.84 and added regression coverage for delta-only events and reload lifecycle safety.
+
+## [1.3.2] - 2026-08-06
+
+### Changed
+
+- **Release workflow** — added repository deployment pipeline configuration and guided deploy skill with mandatory GitHub tags/releases.
+
+## [1.3.1] - 2026-08-06
+
+### Added
+
+- **Activity progress** — startup and live tool status now show active reads and shell commands, including counts such as `Reading 1 file` and `Running 1 shell command`.
+
+## [1.3.0] - 2026-08-05
+
+### Added
+
+- **Tool-group compatibility settings** — `groupToolCallsAcrossTurns` and
+  `showCompactToolStatusDots` expose the 1.3 grouping changes in the settings panel,
+  custom setup wizard, config example, and README. Defaults use the new behavior;
+  either option can restore its pre-1.3 equivalent independently.
+
+### Changed
+
+- **Claude-style multiline composer** — every continuation row aligns beneath the text
+  after the `❯` prompt, regardless of draft length.
+- **Turn-spanning tool groups** — sequential calls separated only by hidden thinking
+  turns join the same muted `Called …` group; actual assistant text remains a boundary.
+- **Stable compact group status** — pending/failed state stays in prose without a
+  transient green dot unless legacy dots are explicitly enabled.
+- **Lighter Called-line color** — mid-gray (~#a0a0a0 / theme muted), not near-black FG_DIM.
+- **Faster image paste** — editor hover preview off; collapsible submitted previews;
+  terminal image width 40 cells.
+- **Busy spinner = Claude shape** — `Crafting… (esc to interrupt · ↓ 1.4k tokens · 1m 2s)`;
+  no thinking chip.
+- **Dense identity-only tool groups** — muted `Called Bash 3 times` /
+  `Called Microsoft 365 3 times` prose replaces command trees and live body flashes.
+- **Hidden thinking chrome** — no more `∴ Thinking` / duration rows.
+- **Faster Pi startup** — optional companions load in parallel; settings UI and `diff`
+  load lazily.
+- **Statusline footer placement** — footer sits above `widgetBelow` so fleet rows remain
+  below memory/caveman status.
+- **Skill rows** — Claude-style `Skill(name)` replaces bold `[skill] name`.
+
+### Fixed
+
+- **Shift+Enter under queue-steer** — recognized Ghostty/Kitty sequences insert a newline
+  directly instead of reaching follow-up handling; outer editor composition is reasserted
+  after paster/queue wrappers.
+- **Grouping after `/reload`** — stable prototype dispatch refreshes the active grouping
+  hook instead of retaining stale `ToolExecutionComponent` identities.
+
+## [1.2.0] - 2026-07-21
+
+### Added
+
+- **First npm release as `cc-my-pi`** — install with `pi install npm:cc-my-pi`;
+  listed on [pi.dev/packages](https://pi.dev/packages).
+
+- **Wizard: standard vs custom setup** — the first-run intro now asks whether
+  you want the **standard** setup (recommended defaults, only pick optional
+  extensions) or **custom** (walk through every setting), chosen with `←/→`.
+  Both paths show the optional-extensions screen; only custom continues into
+  the full per-setting walkthrough.
+
+- **Optional extensions as one checkbox screen** — companions are picked on a
+  single screen (`↑/↓` move, `space` select, `enter` continue, `b` back)
+  instead of one wizard step per package. Installs now shell out to the real
+  `pi install <source>` CLI instead of hand-writing
+  `~/.pi/agent/settings.json`.
+
+- **Update check** — on session start (max once per 24h, 3s deferred, background)
+  the extension fetches the latest published version from the npm registry
+  (GitHub `package.json` fallback while unpublished) and compares it with the
+  installed one. Newer → notify: `cc-my-pi X.Y.Z available (installed A.B.C) —
+  pi install npm:cc-my-pi, then /reload` (or "update your local copy" for
+  clone installs). Offline/HTTP failures stay silent; updating clears the
+  notice immediately. State in `~/.pi/cc-my-pi-update-check.json`. Requires a
+  version bump per release for the notice to fire.
+
+- **Redesigned startup header** — forked from
+  [`pi-claude-code-tui`](https://github.com/Phoobobo/pi-claude-code-tui) (MIT,
+  Phoobobo; header only, no editor box) and reworked to Claude Code proportions:
+  a narrow left column with an animated **π mascot** (the π *is* the creature —
+  a top bar with two legs and blinking eyes, drawn in fine half-block glyphs)
+  above model/effort/cwd, and a wide right column with a **Loaded** panel
+  counting skills · prompts · extensions · mcp (with a global/project split) and
+  a `/loaded for details` hint (plus `/context to view current context` when
+  that command is available). Toggled with `claudeHeaderEnabled` (default
+  `true`, `/reload` to change); off falls back to the one-line
+  `✻ Welcome to Pi` header. Don't install `npm:pi-claude-code-tui` alongside —
+  the header is already bundled. The module is now a FORK (attribution kept, no
+  longer synced from upstream).
+
+- **`/loaded` command** — always registered (independent of the header setting):
+  prints the loaded skills, prompts, extensions, themes and MCP servers, grouped
+  global vs project, using Pi's own resource loader so the counts match Pi's
+  native startup listing.
+
+- **Quiet startup** setting (`quietStartup`) — a row in the `/cc-my-pi` panel and
+  the setup wizard that sets Pi's native `quietStartup` key in
+  `~/.pi/agent/settings.json`, hiding Pi's startup resource listing (use
+  `/loaded` instead). Takes effect next session; the wizard defaults it on when
+  the header is enabled.
+
+- **Optional companion packages** — six MIT-licensed standalone packages
+  (`pi-context-view`, `pi-mcp-adapter`, `pi-subagents`, `pi-dynamic-workflows`,
+  `pi-tasks`, `rpiv-ask-user-question`) now appear as rows in both the
+  `/cc-my-pi settings` panel and the setup wizard, each showing its install
+  state (`✓ installed` / `✗ not installed`). Cycle a row to `⏎ install` to
+  append just that package to `~/.pi/agent/settings.json` (activates on the
+  next `/reload`); skipping is the default and nothing is installed by mashing
+  Enter through the wizard.
+
+- **Statusline module** — the model/ctx gauge, git segment and MCP status footer
+  (previously the separate `packages/statusline` Pi package) is now bundled as a
+  gated module, toggled with `statuslineEnabled` (default `true`, `/reload` to
+  change); `statuslineCtxStyle` and `statuslineShowWorktree` remain as live
+  sub-settings.
+
+- **`cc-my-pi-dark` theme** — Claude Code-style dark palette shipped in-package
+  and registered via the manifest; activate with `"theme": "cc-my-pi-dark"`.
+
+- **/copy-code command** — Claude-style content picker (full response, per code
+  block, always-full skip).
+
+- **Guided setup wizard** — `/cc-my-pi setup` walks through every setting one at
+  a time, applying changes live and showing the `changed: <label> → <value>`
+  example preview for each. It opens on an intro screen offering `enter` start ·
+  `s` skip for now · `x` don't ask again, then auto-runs once on first load and
+  is re-runnable any time via the command. "Skip for now" leaves the
+  `ccMyPiSetupDone` marker unset so the next session re-opens; finishing the
+  steps or "don't ask again" writes the marker to suppress further auto-opens.
+
+### Changed
+
+- **Statusline git segment shows the line diffstat** — the git segment now
+  renders `+N` (green) `−N` (red) insertions/deletions versus `HEAD`, matching
+  Claude Code's statusline, in place of the `N files changed` count. The
+  thinking level (e.g. `(low)`) is color-coded with Pi's own `thinking*` theme
+  keys, so it matches the editor-border color for that level and follows any
+  theme.
+- **Wizard layout is now jump-free** — every frame renders to one constant
+  height, so cycling a value (`←/→`) no longer shifts lines vertically.
+- **Wizard shows your current value as the selected default on every step**,
+  including custom hex/numeric values set outside the curated list (e.g. a
+  `spinner verb` hex color); the first `←/→` moves one step away instead of
+  overwriting it from the list head.
+
+### Fixed
+
+- **MCP server count matches pi-mcp-adapter's own resolution.** The header's
+  `Loaded` panel and `/loaded` used to count only the two pi-owned `mcp.json`
+  files, missing the shared global config (`~/.config/mcp/mcp.json`) and any
+  `imports` (cursor/claude-code/claude-desktop/codex/windsurf/vscode) the
+  adapter itself resolves — so a machine with servers only in the shared
+  global file showed no MCP count at all. Counting now mirrors the adapter's
+  four-source merge plus imports expansion, and is gated on the adapter being
+  installed (no `mcp` command → MCP omitted entirely, as before).
+- **Esc now works inside the wizard.** Under the kitty keyboard protocol Pi
+  negotiates, Escape arrives as the CSI-u sequence `\x1b[27u`, which the old raw
+  `data === "\x1b"` check never matched. The wizard now matches the same
+  `tui.select.cancel` binding the settings panel uses (arrow keys still excluded).
+- **`spinnerEnabled` module toggle** — the Claude-style spinner can now be
+  disabled (`/cc-my-pi setup` or the settings panel `Spinner` row), falling back
+  to Pi's stock spinner. Reload required; default on.
+- **Session commands module** — `/exit` (clean shutdown) and `/clear` (alias
+  for `/new`, replaces the `pi-clear` npm package) moved in from the owner's
+  loose `~/.pi/agent/extensions/` files. Toggle with `sessionCommandsEnabled`
+  (panel row `Session commands`; reload required; default on).
+- **README** rewritten: install guide, modules-optional matrix with
+  per-module settings examples, guided-setup docs.
+
+## 1.1.0 — 2026-07-20
+
+### Changed
+
+- **Renamed** package `pi-claude-code-ui` → `cc-my-pi`; command `/cc-tools` →
+  `/cc-my-pi`. Settings-UI module renamed to
+  `extensions/cc-my-pi-settings-ui.ts`. Repo renamed to
+  [timvdhoorn/cc-my-pi](https://github.com/timvdhoorn/cc-my-pi).
+- **Folded** `/cc-theme` and `/cc-spinner` into the root command as
+  `/cc-my-pi theme on|off|toggle|status` and
+  `/cc-my-pi spinner verb|status|preview|reset` (with completions); the
+  standalone commands are removed.
+- **Settings panel** gains `Spinner verb` and `Spinner status` rows (curated
+  theme-key cycle; full key list and hex via `/cc-my-pi spinner`).
+- Added LICENSE (MIT, dual copyright) and a README "Credits & provenance"
+  section attributing FammasMaz (base fork), Thomas Mustier (queue-steer,
+  esc-steer), Sanju (double-esc-clear), and key dependencies.
+
+### Added
+
+- **Bundled queue-steer** — vendored [@tmustier/pi-queue-steer](https://github.com/tmustier/pi-queue-steer) v0.1.0 (MIT, Thomas Mustier) into `extensions/queue-steer/` with a new `/cc-tools` row `Queue steer` (`queueSteerEnabled`, default on, live toggle). Local delta vs upstream: register-function + live gate, and a draft-aware Esc guard — Esc while busy only pauses the queue and aborts when the chatbox is empty; a typed draft leaves Esc to double-esc-clear (hint + second-Esc clear). Replaces loading the standalone git package; the shared `QUEUE_STEER_FEATURE` marker keeps an accidental double-load mutually exclusive.
+
+- **Statusline gauge and worktree rows** — `/cc-tools` gains two rows that steer the Claude preset's statusline package (name-shared settings keys, no import coupling; the statusline re-reads on a 5s TTL). `Statusline ctx` picks `claude` (Catppuccin gauge with a smooth eighth-block bar) or `plain` (theme-colored gauge). `Statusline wt` toggles the `wt <name>` segment shown when inside a git worktree.
+- **Bundled Esc behaviors** — the two Claude Code Escape reflexes now ship inside this package, both default-on and toggleable live from `/cc-tools` (no reload). `escSteerEnabled` (bundled copy of `pi-esc-steer`, same author) makes Esc while the agent runs abort and then auto-continue whatever was queued; it composes with the optional `pi-queue-steer` package and Pi's native queue, and shares `pi-esc-steer`'s feature marker so the two are mutually exclusive automatically. `doubleEscClearEnabled` (vendored from `@thisux/pi-double-esc-clear` v1.0.3, MIT, author Sanju <https://sanju.sh/>) clears a non-empty idle draft on double-Esc within 800 ms, leaving Pi's empty-editor double-Esc untouched. Both gate per-keypress via live getters. Users who installed the standalone packages should run `pi remove npm:pi-esc-steer` and `pi remove npm:@thisux/pi-double-esc-clear`.
+- **Built-in optional image paster** — `pi-paster` is now a runtime dependency, enabled by default through `imagePasterEnabled`. `/cc-tools` exposes an Image paster toggle; reload applies changes. The Claude prompt glyph decorates the shared `CustomEditor` prototype instead of replacing `PasterEditor`, preserving clipboard image and image-path attachments.
+- **Interactive `/cc-tools` settings panel** — bare `/cc-tools` (or `/cc-tools ui`) opens an overlay with all major display options. Cycling a value applies it live and refreshes an ASCII preview of tool chrome, grouping, and output modes. Existing subcommands (`outlines`, `group`, `branch`, `status`, …) still work.
+
+### Changed
+
+- **Success tool status dots render `#00BD5A`** — grouped and ungrouped success dots (including the Agent-family breathe glyph) now share the same fixed brand green in fixed-palette mode instead of two different greens; theme-adaptive mode is unaffected and still follows the active theme's success color.
+- **Collapsed grouped tool rows now show their result summary** — with tool grouping on, each collapsed child line keeps its muted result summary as a same-line suffix (e.g. `● Ctx Execute · 5 lines returned`) instead of dropping it entirely; the `ctrl+o to toggle` hint is not repeated per child since the group header already shows one.
+- **Tool rows use Claude Code's glyphs** — the tool status bullet is now `⏺` (U+23FA) on macOS, falling back to `●` on other platforms where the glyph is poorly supported. The connector under a single tool (or the last tool in a grouped block) is now the `⎿` result arm (U+23BF); mid-tree `├`/`│` connectors are unchanged. Agent-family breathe glyphs keep their `● • ·` optical-size family. Both new glyphs are single display cells, so column alignment is unaffected.
+- **Tree connectors lighter by default** — `DEFAULT_TOOL_BRANCH_GRAY` raised from 72 to 128, closer to Claude Code's dim gray for the `├ │ └` connector column.
+- **Assistant list bullets always render `-`** — matches Claude Code parity; the `assistantListBulletStyle` setting and `/cc-tools bullets` subcommand are removed.
+- **Collapsed diff previews default to 10 lines** — the Edit and apply_patch preview paths previously hardcoded a 32-line cap regardless of the `diffCollapsedLines` setting; all three tool paths (Create/Edit/apply_patch) now share `diffCollapsedLimit()`, whose default drops from 24 to 10. Configurable via `/cc-tools diff <1-150>` (or `reset`/`status`) and a new row in the `/cc-tools` settings UI.
+- **Collapsed diff preview cap defaults back to stock** — the 10-line default from the previous entry proved too aggressive; with no `diffCollapsedLines` setting, collapsed previews now use the pre-plan-009 stock caps again (24 lines for Write/new-file, 32 for Edit/apply_patch single-change, and the original multi-op formula). `/cc-tools diff <1-150>` and the settings UI remain available for an explicit cap; `/cc-tools diff stock` (or the settings UI's `stock` value) restores the default.
+- **Thinking blocks collapse to a one-liner by default** — matches Claude Code: thinking content now renders as a single dim italic `∴ Thinking` line with a `ctrl+o to expand` hint instead of the full text inline. `ctrl+o` (the same shared tools-expanded toggle) reveals the full thinking text and collapses it again on a second press.
+- **Minimal diff chrome, plain new-file previews** — matches Claude Code: diff summaries drop the `[━━]` stat bar and the hunk-count/`split`/`unified` mode labels (only `new file` and `delete` still appear); Write previews for brand-new files now render as plain dim-numbered text instead of a green-background add diff. Edit and apply_patch diffs keep their colored rendering.
+
+### Fixed
+
+- **User prompts now match Claude Code's compact row style** — submitted messages use a full-width `userMessageBg` row with muted `❯`, no border or vertical padding, and clean multiline continuation alignment; the live input editor now uses the same `❯` prompt glyph.
+- **Custom tool titles no longer render twice** — generic call summaries no longer fall back to `humanizeToolName(name)`, which produced headers like `Ask User Question Ask User Question` and `Advisor Advisor` for tools without a path/query/prompt arg. `ask_user_question` / `questionnaire` now summarize as `N question(s)`; `advisor` shows its configured reviewer model and thinking effort; `AskClaude` uses the prompt. `toolHeader` also drops a summary that only repeats the title.
+- **Collapsed group summaries no longer leak the result line's own branch glyph** — extraction now strips the `└`/`⎿` arm and invisible wrap marker from the source result line before use, so summaries read `· 83 lines returned` instead of `└ 83 lines returned`.
+
+## 1.0.74 — 2026-07-18
+
+### Fixed
+
+- **Grouped tool boxes keep Agent breathe aligned** — group rows strip all breathe glyphs (including `·` and the blank off-phase) before re-prefixing a fresh light, so titles no longer walk sideways. Group header/child lights also follow the shared blink phase (and Agent breathe) instead of wall-clock `isBlinkOn()`.
+
+## 1.0.73 — 2026-07-18
+
+### Fixed
+
+- **Agent rows align with other tools again** — removed the extra leading indent that only applied to Agent-family tool rows.
+- **Agent breathe stays centered** — drop double-width `⬤` (it walked the baseline). Cycle is now single-cell glyphs `● → • → · → (invisible) → · → •` so the optical center never moves.
+
+## 1.0.72 — 2026-07-18
+
+### Changed
+
+- **Agent tools breathe** — `Agent` / subagent tools use a size cycle while pending instead of the ordinary on/off `●` blink, so agent work reads as a different kind of tool.
+
+## 1.0.71 — 2026-07-18
+
+### Fixed
+
+- **Long-running tools no longer freeze their status dots** — the 15s stale watchdog was treating quiet tools (no `tool_execution_update`) as leaked and killing the blink timer mid-run. While an agent is live the timer now heartbeats itself; stale cleanup only runs after the agent finishes. Also stop clearing blink state on `turn_end` (turns end before tools run).
+
+## 1.0.70 — 2026-07-17
+
+### Fixed
+
+- **Live tool status dots blink again while commands stream** — partial tool rows re-arm the blink timer from both the call header and the live preview path, and `tool_execution_update` keeps the 15s stale watchdog from killing blink mid-bash.
+- **Interrupted / resumed tools no longer blink forever** — only tools with `executionStarted` during a live agent run count as pending. History partials (resume, compaction, `/tree`, aborted runs without a toolResult) settle to a static green/dim dot and clear blink timers on `session_start`.
+
+### Changed
+
+- **No more `Running...` status row** — the blinking `●` on the tool heading is the only in-flight indicator. Live non-empty line count moves to the heading as muted `(N lines)`; the body shows only the output tail while streaming.
+
+## 1.0.69 — 2026-07-17
+
+### Changed
+
+- **Package rename** — npm package is now `pi-claude-code-ui` (was `pi-claude-style-tools`). Install with `pi install npm:pi-claude-code-ui` (or your usual npm/pi install path).
+- **Claude-style status dots** — pending markers no longer fall back to a hollow outlined `○`. They now blink as a bold filled `●` that is either solid or fully gone (space-kept alignment), matching Claude Code.
+- **Heavier (not huge) dots** — success/error/pending use bold `●` (not oversized `⬤`) so they read a bit larger without dominating the tool title.
+- **Bare branch connectors** — tree leads use `├` / `└` with no horizontal `─` arm, including Magic Context todo overlay rows (armed `├─` / `└─` input is normalized to bare).
+
+## 1.0.68 — 2026-07-15
+
+### Changed
+
+- **Snappier spinner glyphs** — loader frame interval `250ms → 170ms` so `· ✢ ✳ ✶ ✻ ✽` cycles feel more lively while working.
+- **Bigger verb pool** — many more whimsical working verbs (debugging, refactoring, brainstorming, overthinking, …) so the status line repeats less often.
+
+### Fixed
+
+- **Stale tool-group headers / weird counts** — settled `ToolGroupComponent` rows no longer keep serving a cached header after a child tool finishes or updates. Child mutations now mark only the parent group dirty (no sibling cascade), so counts like `N running` clear immediately instead of lingering until the next tool/message.
+- **Long-chat tool-group re-render cost** — fully-settled groups memoize their rendered lines and skip child walks on warm frames (scroll, spinner, expand elsewhere). This was the main remaining long-history regression vs stock pi when `groupToolCalls` is on.
+- **Preview styling O(output)** — `buildPreviewText` now styles only the lines that will be shown; bash finished/collapsed paths collect a tail (or count-only) instead of materializing every non-empty line; live previews reuse the single-pass collector.
+- **Todo overlay hot path** — non-todo containers bail after the first non-empty line instead of scanning every rendered line on every frame.
+- **Shiki cache across turns** — `hlCache` is no longer wiped on every `turn_end` (still cleared on session shutdown / theme rebind). Repeated expand/scroll of the same diffs no longer re-highlights from scratch each turn.
+- **Session map cleanup** — `WRITE_EXISTED_BEFORE` is cleared on `session_shutdown` so long-lived agent processes don’t retain per-write entries forever.
+
+### Performance notes
+
+Bench (`bun scripts/benchmark-tools.ts`, width 120):
+
+| Case | baseline warm | full (this package) warm |
+| ------ | --------------- | --------------------------- |
+| assistant-history-120 | ~0.44 ms | **~0.09 ms** (faster than stock) |
+| tool-history-120 (grouped) | ~0.43 ms | **~0.27 ms** (faster than stock) |
+| tool-history-240 (grouped) | ~0.90 ms | ~1.2 ms (first-render still heavier due to outlines/diffs; warm path much closer) |
+
+Cold/first render of rich tool chrome is still intentionally heavier than stock pi (borders, branch connectors, diff previews). Warm long-chat frames — the lag users feel while scrolling — are now at or below stock for assistant history and grouped tool history.
+
+## 1.0.67 — 2026-07-15
+
+### Fixed
+
+- **Magic Context tool rendering** — `ctx_search`, `ctx_memory`, `ctx_note`, `ctx_expand`, `ctx_reduce`, and `todowrite` now use the same Claude-style tool rows as other external tools.
+- **Todo overlay labels** — task IDs no longer display a leading `#`.
+- **Hermes memory notice styling** — the auto-review notice now matches thinking text color and weight instead of applying additional ANSI dimming.
+
+## 1.0.66 — 2026-07-15
+
+### Fixed
+
+- **Thinking presentation** — thinking text is no longer italic, visible thinking uses the `∴` marker, and collapsed “Thinking…” / “Thought for…” rows omit the marker while retaining the correct text indentation.
+- **Hermes memory notice styling** — the `💾 Memory auto-reviewed and updated` notification is restyled locally as a translucent `✻ Memory auto-reviewed and updated`, without modifying the pi-hermes-memory extension.
+- **Todo overlay alignment** — todo headings and task rows now have the missing indent, and their `├─` / `└─` connectors follow the configured tool branch color.
+
+## 1.0.65 — 2026-07-01
+
+### Fixed
+
+- **Idle crash / "job failed" while pi sits stale** — leaked blink entries (a tool that completed without clearing, or a turn that ended without `turn_end`) kept the 500 ms blink timer re-arming forever, forcing full TUI re-renders twice a second while idle. Each re-render re-ran the layout and either tripped pi's render width-assertion (crash) or grew RSS until the OS killed pi (silent crash → Ghostty "job failed"). Added an `agent_end` clear and a 15 s staleness watchdog so leaked entries can't sustain the re-render loop.
+- **Render width-assertion crash on wide content** — `clampLineWidth`/`padRenderedLineToWidth` now cap at `process.stdout.columns`, so the extension never emits a line wider than the real terminal even when pi hands it a too-wide width (e.g. content later placed in a narrower side panel).
+
+## 1.0.64 — 2026-07-01
+
+### Added
+
+- **`read` on `SKILL.md` shows as `[skill]`** — paths ending in `SKILL.md` use the same `[skill]` label styling as custom skill messages (krikchaip).
+
+### Fixed
+
+- **Finished tool rows no longer pulse as pending after reload** — only `isPartial` marks a row pending; missing `executionStarted` on history rows no longer triggers blink timers (krikchaip).
+- **Tool row backgrounds after `/reload`** — strip the outer `Box` success background ANSI on rebuilt rows so transparent/outline mode stays clean (krikchaip).
+- **Unmatched partial tool calls in old branches** — partial rows without `executionStarted` show a static muted dot instead of an endless pending blink (krikchaip).
+- **Partial rows at tree-navigated leaves** — when the result lives off the selected branch, blink only while an agent is actually running; settled history renders as finished (green when succeeded) (krikchaip).
+- **Duplicate bash expand hint** — finished bash rows keep “expand” on the summary line only; the preserved output preview no longer repeats it (krikchaip).
+
+## 1.0.63 — 2026-07-01
+
+### Fixed
+
+- **Random crash on large diffs** — rendering a large edit or `apply_patch` could throw `RangeError: Maximum call stack size exceeded`. Root cause: the split/unified diff renderers computed the max line number via `Math.max(...diff.lines.map(...))`, spreading the *entire* diff line array as function arguments — fine for small diffs, but a stack overflow on diffs with thousands of lines. Replaced with a loop-based `maxLineNumber()` that returns identical results. No visual or behavioral change.
+- **Shiki import no longer leaves a dangling rejected promise** — a failed `import("@shikijs/cli")` (missing dep, transient error) previously left a permanently-rejected promise that could surface as an unhandled-rejection crash under strict modes. The loader now resets on failure so the next render retries.
+
+### Changed
+
+- **Lower CPU / heat during long-running bash** — the bash tool's live preview re-split and re-filtered the *entire* output on every partial update (bash throttles updates every ~100ms and the pending-dot blink re-invalidates every 500ms), scaling linearly with output size. It now collects only the visible tail lines and a total count in a single pass, so cost no longer grows with output length.
+- **Bounded Shiki concurrency for multi-edit / multi-file diffs** — edit and `apply_patch` call-phase previews previously fired all syntax-highlighting jobs at once via `Promise.all`, causing CPU spikes on large multi-block diffs. They now run with a small concurrency cap (2), preserving ordered output.
+- **Spinner no longer keeps running after the UI stops** — the 250ms Loader animation loop (and its `requestRender` calls) kept firing after the TUI was stopped. It now short-circuits and stops itself when the UI is stopped, so it can't keep the event loop or CPU alive as an orphan.
+- **More timers `unref`'d** — the deferred chrome-rebind `setTimeout` (fired on `/resume` / `/new` / `/fork`) and the same-frame working-message `setTimeout` were not unref'd, keeping the Node event loop alive. Both now `unref` so they can't hold the process open or spin idle.
+
+No functionality changed in this release — output is byte-identical for all existing cases; the diffs above are strictly CPU/stability improvements verified by `npm run typecheck` and `bun scripts/benchmark-tools.ts`.
+
+## 1.0.62 — 2026-06-22
+
+### Fixed
+
+- **"Turn took" line no longer appears mid-stream** — the end-of-run status line was showing while the assistant was still streaming text. Root cause: the component render path gated on `message.stopReason === "stop"`, but the Anthropic provider initializes the live message's `stopReason` to `"stop"` at creation and only updates it to the real value when `message_delta` arrives near the end of the stream — so the gate was already true during streaming. The component path now gates on the `explicitDuration` flag stamped by the `message_end` handler (which fires after `message_delta`, once the real `stopReason` is known), so the line appears only after the stream truly closes. The `message_end` path was already correct (it fires post-`message_delta`); only the live component fallback was premature.
+
+## 1.0.61 — 2026-06-22
+
+### Changed
+
+- **Renamed "Worked for" → "Turn took"** — the end-of-run status line now reads `✻ Turn took 2m 30s (Total time 1h 12m 30s · 14 turns)`. The session-total duration now always shows seconds and only adds minutes/hours once the session has actually lasted that long (e.g. `45s`, `12m 30s`, `1h 12m 30s`); the bracket label is now capitalized as "Total time".
+
+## 1.0.60 — 2026-06-22
+
+### Changed
+
+- **"Worked for …" only on the true end of a run** — the line now appears only when the model finishes all of its turns for a prompt (`stopReason === "stop"`), instead of after every assistant message that didn't end in a tool call. Intermediate stops that pi retries through (`error`, `aborted`, `length`/max-tokens, compaction retries) no longer get a premature "Worked for" line — it shows once, when the model is actually done.
+- **Session total + turn count on the Worked line** — the line now reads `✻ Worked for 2m 30s (total time 1h 12m · 14 turns)`, where the bracket is the running session-wide elapsed time and the number of prompts you've sent. Totals are seeded from the full message history, so `/resume` picks up past prompts and the original session start. `/new` resets the counters.
+
+## 1.0.59 — 2026-06-19
+
+### Fixed
+
+- **Scrolling / expand lag on long chats** — every re-render (scroll, tool expand, theme tick) re-ran the per-line ANSI stripping behind copy-zone markers (`applyTerminalCopyZones`), per-line glyph normalization, and user-message border boxing for *every* message in the history. That work scaled linearly with chat length and dominated CPU on long sessions (the more messages, the slower each frame). The rendered output of assistant, user, and custom-message components is now memoized per `(width, branch-visual-epoch)` on the component instance and reused on warm re-renders, with the cache dropped whenever content actually changes (`updateContent` / `rebuild`) or the theme chrome epoch bumps. Warm re-render of a 120-message history drops from ~5.9 ms to ~0.16 ms and stays flat as the chat grows instead of scaling with it. Output is byte-identical (same rendered line counts and content); no functionality changed.
+
+## 1.0.58 — 2026-06-17
+
+### Fixed
+
+- **Transparent tool rows after `/resume`** — Pi’s `ToolExecutionComponent` uses the global theme singleton for `toolPendingBg` / `toolSuccessBg` / `toolErrorBg`. Re-apply transparent overrides on that object and before every `updateDisplay()`, with extra deferred chrome rebind after history rebuild on resume/new/fork.
+- **Stale tool row chrome on theme switch** — bump branch/render epoch when the active theme name or color fingerprint changes so cached tool lines pick up new palette.
+
+## 1.0.57 — 2026-06-17
+
+### Changed
+
+- **Branch connectors default** — `├─` `└─` `│` use **fixed rgb(72)** unless you set `/cc-tools branch theme` or a custom gray. `/cc-tools branch reset` restores that default.
+
+### Fixed
+
+- **Resume / session switch theme mix** — on `session_start` (especially `resume`, `new`, `fork`), rebind tool chrome from the active pi theme (palette cache bust, Shiki light/dark, branch epoch, full UI invalidate) plus deferred passes so other extensions can `setTheme` in the same tick without cross-package coupling.
+- **Hidden thinking summary** sticks on "Thinking…" when `thinking_end` lands on the same frame as Pi's `updateContent` — per-message active/duration flags plus a deferred UI refresh so "Thought for Ns" appears right away.
+- **Spinner footer** applies the same deferred sync on thinking start/end so "thought for Ns" shows immediately when thinking finishes.
+
+### Changed
+
+- **Unified container chrome** — user message box, tool outline rules, rounded code fences, and branch connectors share one theme-derived color (`dim` → `muted` → `borderMuted`) so light themes do not get harsh dark user borders or overly bright branches.
+- **User message fill** — strip nested `Box` → `Markdown` backgrounds so the framed user row stays transparent and matches terminal chrome (fixes dark slabs inside the border).
+- **Light-theme branch chrome** — when the active theme has a light panel, outline/branch colors are attenuated toward mid-gray so `├─` `└─` `│` and user borders are not washed-out bright; `/cc-tools status` no longer implies theme mode uses fixed gray 72.
+
+## 1.0.56 — 2026-06-17
+
+### Fixed
+
+- **Theme-adaptive tool chrome** re-derives when the active pi theme’s resolved colors change (fingerprint of `success`, `borderMuted`, `accent`, etc.), not only when the theme object identity changes. Fixes stale borders/dots/diffs after external theme sync (e.g. Ghostty) without coupling to other extensions.
+
+### Changed
+
+- Palette cache tracks `theme.name` plus color fingerprint; removed cross-extension global bust symbols.
+
+## 1.0.55 — 2026-06-17
+
+- Internal: theme name in cache key (superseded by 1.0.56 fingerprint).
+
+## 1.0.54 — 2026-06-17
+
+### Changed
+
+- **Branch connectors** (`├─` `└─` `│`): default **`theme`** mode (was fixed gray). Uses **dim → muted → thinkingText**, same family as thought/gray prose.
+- **Pending tool dots** (○): use theme **dim** when theme-adaptive; grouped counts use the same pending color.
+
+### Fixed
+
+- `/cc-tools branch reset` restores theme-following default, not fixed rgb(72).
+
+## 1.0.53 — 2026-06-17
+
+### Fixed
+
+- **Light theme edit/write diffs**: auto-select Shiki `github-light` vs `github-dark`; light panel tint base; Shiki contrast normalization for light backgrounds.
+- **Light theme tool status chrome**: pending ○ / blink uses softer `borderMuted` instead of heavy `muted`; grouped tool pending counts match.
+
+## 1.0.52
+
+- Theme-adaptive diff and branch tooling updates.

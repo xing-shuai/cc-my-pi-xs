@@ -1,0 +1,99 @@
+{
+  "name": "cc-my-pi-xs",
+  "version": "1.4.3-xs.1",
+  "description": "Personal Pi UI fork of cc-my-pi: optional Devin compact view, expandable user messages, ask_user details, configurable footer and live token telemetry.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "claude-code",
+    "pi",
+    "tool-renderer",
+    "mcp",
+    "terminal-images",
+    "tool-groups",
+    "math-rendering",
+    "latex",
+    "keybindings",
+    "shiki",
+    "diff"
+  ],
+  "license": "MIT",
+  "author": "xing-shuai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xing-shuai/cc-my-pi-xs.git"
+  },
+  "homepage": "https://github.com/xing-shuai/cc-my-pi-xs#readme",
+  "bugs": {
+    "url": "https://github.com/xing-shuai/cc-my-pi-xs/issues"
+  },
+  "files": [
+    "extensions",
+    "themes",
+    "config",
+    "assets/screenshots",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "VENDOR.md",
+    "!extensions/**/*.test.ts",
+    "!extensions/pi-tasks/src/ui/task-navigation.ts"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit --allowImportingTsExtensions --target ES2022 --module NodeNext --moduleResolution NodeNext --skipLibCheck extensions/index.ts extensions/spinner.ts extensions/cc-my-pi-settings-ui.ts extensions/companion-packages.ts extensions/esc-steer.ts extensions/double-esc-clear.ts extensions/copy-command.ts extensions/queue-steer/index.ts extensions/claude-header/index.ts extensions/statusline/model-info/index.ts extensions/statusline/git-info/index.ts extensions/statusline/ui-customization/index.ts extensions/bash-execution-render.ts",
+    "test": "node --test --experimental-strip-types extensions/pi-tasks/task-chat.test.ts extensions/customization.test.ts",
+    "pack:dry-run": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@effect/platform-node": "4.0.0-beta.98",
+    "@effect/platform-node-shared": "4.0.0-beta.98",
+    "@shikijs/cli": "^4.0.2",
+    "diff": "^9.0.0",
+    "effect": "4.0.0-beta.98",
+    "pi-paster": "^0.2.3",
+    "shiki": "^4.4.1"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.9",
+    "protobufjs": "^7.6.5",
+    "sharp": "^0.35.3"
+  },
+  "allowScripts": {
+    "protobufjs@7.6.4": true,
+    "protobufjs@7.6.5": true,
+    "@google/genai@1.52.0": true,
+    "sharp": true,
+    "msgpackr-extract": true
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/index.ts",
+      "./extensions/spinner.ts"
+    ],
+    "themes": [
+      "./themes/cc-my-pi-dark.json"
+    ]
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "^0.84.0",
+    "@earendil-works/pi-coding-agent": "^0.84.0",
+    "@earendil-works/pi-tui": "^0.84.0",
+    "@types/node": "^25.7.0",
+    "typebox": "^1.1.34",
+    "typescript": "^6.0.3",
+    "jiti": "^2.7.0"
+  },
+  "contributors": [
+    "FammasMaz (original pi-cc-tools / pi-claude-code-ui)",
+    "Tim van den Hoorn (cc-my-pi)"
+  ],
+  "private": true,
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}
