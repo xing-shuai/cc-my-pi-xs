@@ -30,11 +30,61 @@ type DevinViewOptions = {
   enabled: () => boolean;
   theme: () => Theme;
   askUserDetails?: () => boolean;
+  toolColors?: () => boolean;
   renderUserControl?: (text: string, width: number) => string;
 };
 
 type Part = { text: string; tone: "text" | "dim" | "success" | "error" };
 const readCounts = new WeakMap<object, number | undefined>();
+
+const TOOL_COLORS: Record<string, string> = {
+  read: "#5fd7ff", bash: "#e5b567", edit: "#c792ea", write: "#8bd49c",
+  grep: "#82aaff", find: "#f78c6c", ls: "#4ec9b0", apply_patch: "#f2a2c0",
+  process: "#abb2ff", ask_user: "#d7c56c",
+};
+const TOOL_COLOR_ALIASES: Record<string, string> = { shell: "bash", exec_command: "bash" };
+const callThemes = new WeakMap<Theme, Map<string, Theme>>();
+
+/** Fixed, theme-independent hues; unknown tool names get a stable fallback. */
+export function toolTypeColor(name: string): string {
+  const raw = name.toLowerCase();
+  const key = Object.hasOwn(TOOL_COLOR_ALIASES, raw) ? TOOL_COLOR_ALIASES[raw] : raw;
+  if (Object.hasOwn(TOOL_COLORS, key)) return TOOL_COLORS[key];
+  let hash = 2166136261;
+  for (const char of key) hash = Math.imul(hash ^ char.codePointAt(0)!, 16777619) >>> 0;
+  return `#${[0, 8, 16].map((shift) => (100 + ((hash >>> shift) & 255) % 145).toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function colorToolText(name: string, text: string): string {
+  const hex = toolTypeColor(name);
+  const rgb = [1, 3, 5].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16));
+  const fg = `\x1b[38;2;${rgb.join(";")}m`;
+  // Replace nested foregrounds, but retain bold/italic and other non-color styles.
+  const body = text.replace(/\x1b\[(?:38[;:][0-9;:]+|3[0-7]|9[0-7]|39)m/g, "")
+    .replace(/\x1b\[0m/g, `\x1b[0m${fg}`);
+  return `${fg}${body}\x1b[39m`;
+}
+
+/** Color call headings/arguments only, never result output or diff colors. */
+export function toolCallColorTheme(theme: Theme, name: string): Theme {
+  let byName = callThemes.get(theme);
+  if (!byName) { byName = new Map(); callThemes.set(theme, byName); }
+  const cached = byName.get(name);
+  if (cached) return cached;
+  const colored = new Proxy(theme, {
+    get(target, property) {
+      if (property === "fg") return (tone: Parameters<Theme["fg"]>[0], text: string) => {
+        const statusOnly = /^[✓✔✕×✗●○…↗■!·\s]+$/.test(stripVTControlCharacters(text));
+        return (tone === "toolTitle" || tone === "accent") && !statusOnly
+          ? colorToolText(name, text) : target.fg(tone, text);
+      };
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  byName.set(name, colored);
+  return colored;
+}
 
 function plain(value: unknown): string {
   return stripVTControlCharacters(String(value ?? "").slice(0, 8192)).replace(/[\x00-\x1f\x7f-\x9f]/g, " ").replace(/\s+/g, " ").trim();
@@ -144,7 +194,7 @@ export function devinToolSummary(tool: any): string {
   return devinToolParts(tool).map((part) => part.text).join("");
 }
 
-export function renderDevinTool(tool: any, width: number, theme: Theme): string[] {
+export function renderDevinTool(tool: any, width: number, theme: Theme, toolColors = false): string[] {
   if (tool.hideComponent) return [];
   const failed = tool.result?.isError === true;
   const complete = Boolean(tool.result) && tool.isPartial !== true;
@@ -152,7 +202,10 @@ export function renderDevinTool(tool: any, width: number, theme: Theme): string[
   const submitted = complete && !failed && tool.toolName === "process" && tool.args?.action === "start";
   const color = failed ? "error" : submitted ? "accent" : complete ? "success" : tool.executionStarted ? "accent" : "dim";
   const icon = failed ? "×" : submitted ? "↗" : complete ? "✓" : tool.executionStarted ? "…" : "○";
-  const body = devinToolParts(tool).map((part) => theme.fg(part.tone === "text" ? "dim" : part.tone, part.text)).join("");
+  const body = devinToolParts(tool).map((part) =>
+    toolColors && (part.tone === "text" || part.tone === "dim")
+      ? colorToolText(tool.toolName, part.text)
+      : theme.fg(part.tone === "text" ? "dim" : part.tone, part.text)).join("");
   const lines = [truncateToWidth(` ${theme.fg(color, icon)} ${body}`, width, "…")];
   if (failed) {
     const error = tool.result.content?.filter((block: any) => block.type === "text").map((block: any) => block.text ?? "").join("\n").split(/\r?\n/).find((line: string) => plain(line));
@@ -371,15 +424,15 @@ export function installDevinView(options: DevinViewOptions): void {
     if (tool.imageComponents?.length) return original();
     if (tool.toolName === "ask_user" && tool.result && tool.isPartial !== true && (tool.expanded || options.askUserDetails?.() !== false)) {
       const theme = options.theme();
-      return boundary(tool, [renderDevinTool(tool, width, theme)[0]!, ...renderDevinAskUserDetails(tool, width, theme)]);
+      return boundary(tool, [renderDevinTool(tool, width, theme, options.toolColors?.() === true)[0]!, ...renderDevinAskUserDetails(tool, width, theme)]);
     }
-    if (!tool.expanded) return boundary(tool, renderDevinTool(tool, width, options.theme()));
+    if (!tool.expanded) return boundary(tool, renderDevinTool(tool, width, options.theme(), options.toolColors?.() === true));
     const lines = trimPadding(original());
     const chrome = (line: string) => /^[\s─━═╭╮╰╯┌┐└┘│]*$/.test(stripVTControlCharacters(line));
     while (lines.length && chrome(lines[0]!)) lines.shift();
     while (lines.length && chrome(lines.at(-1)!)) lines.pop();
     if (lines.length) lines.shift(); // Replace the original call header.
-    return boundary(tool, [renderDevinTool(tool, width, options.theme())[0]!, ...lines]);
+    return boundary(tool, [renderDevinTool(tool, width, options.theme(), options.toolColors?.() === true)[0]!, ...lines]);
   };
   if (!toolProto[INSTALLED]) {
     const original = toolProto.render;

@@ -175,6 +175,51 @@ test("read ranges, edit counts and multiline shell summaries stay compact", () =
   assert(!colors.includes("text"));
 });
 
+test("tool type colors use a fixed palette without recoloring semantic roles", () => {
+  const names = ["read", "bash", "edit", "write", "grep", "find", "ls", "apply_patch", "process", "ask_user"];
+  assert.equal(new Set(names.map(view.toolTypeColor)).size, names.length);
+  assert.equal(view.toolTypeColor("shell"), view.toolTypeColor("bash"));
+  for (const name of ["mcp_lookup", "constructor", "__proto__"]) {
+    assert.match(view.toolTypeColor(name), /^#[0-9a-f]{6}$/);
+    assert.equal(view.toolTypeColor(name), view.toolTypeColor(name));
+  }
+  const colored = view.toolCallColorTheme(theme, "read");
+  assert.equal(colored, view.toolCallColorTheme(theme, "read"));
+  assert.equal(colored.fg("toolTitle", "Read"), view.colorToolText("read", "Read"));
+  assert.equal(colored.fg("accent", "src/app.ts"), view.colorToolText("read", "src/app.ts"));
+  assert.equal(colored.fg("toolTitle", theme.bold("Read")), view.colorToolText("read", theme.bold("Read")));
+  for (const [tone, text] of [["success", "+16"], ["error", "-2"], ["warning", "warning"], ["accent", "●"], ["muted", "output"], ["dim", "context"]]) {
+    assert.equal(colored.fg(tone, text), theme.fg(tone, text));
+  }
+  const otherTheme = { fg: (tone, text) => `${tone}:${text}` };
+  assert.equal(view.toolCallColorTheme(otherTheme, "read").fg("toolTitle", "Read"), colored.fg("toolTitle", "Read"));
+  assert.equal(clean(view.colorToolText("read", theme.fg("muted", "src/app.ts"))), "src/app.ts");
+});
+
+test("Devin tool colors preserve text, statuses, diff counts, errors and narrow widths", () => {
+  const samples = [
+    makeTool("read", { path: "sample.ts" }),
+    makeTool("bash", { command: "npm test" }),
+    makeTool("edit", { path: "sample.ts" }, { added: 16, removed: 2 }),
+    { toolName: "process", args: { action: "start", name: "retry" }, result: { content: [], details: {} }, isPartial: false },
+  ];
+  for (const tool of samples) {
+    const original = view.renderDevinTool(tool, 100, theme);
+    assert.deepEqual(view.renderDevinTool(tool, 100, theme, false), original);
+    const colored = view.renderDevinTool(tool, 100, theme, true);
+    assert.deepEqual(colored.map(clean), original.map(clean));
+    assert(colored.join("\n").includes(view.colorToolText(tool.toolName, "COLOR").split("COLOR")[0]));
+    for (const width of [1, 8, 20, 80]) assert(view.renderDevinTool(tool, width, theme, true).every((line) => tui.visibleWidth(line) <= width));
+  }
+  const edit = view.renderDevinTool(samples[2], 100, theme, true)[0];
+  assert(edit.includes(theme.fg("success", " +16")));
+  assert(edit.includes(theme.fg("error", " -2")));
+  const failed = { ...samples[1], result: { isError: true, content: [{ type: "text", text: "Test failed" }] } };
+  const before = view.renderDevinTool(failed, 100, theme), after = view.renderDevinTool(failed, 100, theme, true);
+  assert.equal(after[1], before[1]);
+  assert(after[0].startsWith(` ${theme.fg("error", "×")} `));
+});
+
 test("ask details retain questions, answers and notes, never unselected options", () => {
   const tool = makeTool("ask_user", askArgs, askDetails, "release: 人工确认");
   const before = JSON.stringify(tool.result);
@@ -240,6 +285,50 @@ test("default-on ask setting persists off/on through the real settings panel", a
   assert.equal(saved.devinAskUserDetails, true); assert.equal(saved.unrelated, "preserve");
   assert(rows(tool).join("\n").includes("问题 1："));
   assert.equal(ui.SETTING_ORDER.find((s) => s.id === "devinAskUserDetails").current({}), "on");
+});
+
+test("tool type colors default off and toggle live in both styles through settings", async () => {
+  const definition = ui.SETTING_ORDER.find((s) => s.id === "toolTypeColors");
+  assert.equal(definition.current({}), "off");
+  assert(!Object.hasOwn(JSON.parse(readFileSync(settingsPath, "utf8")), "toolTypeColors"));
+  const samples = [makeTool("read", { path: "src/app.ts", offset: 1, limit: 2 }), makeTool("bash", { command: "npm test" })];
+  const baseline = samples.map((tool) => rows(tool));
+  const baselineCalls = samples.map((tool) => tool.callRendererComponent.render(100));
+  const baselineResults = samples.map((tool) => tool.resultRendererComponent.render(100));
+  let panel;
+  const ctx = { mode: "tui", hasUI: true, ui: {
+    theme, custom: async (factory) => { panel = factory({}, theme, {}, () => {}); },
+    getToolsExpanded: () => false, setToolsExpanded(expanded) { samples.forEach((tool) => tool.setExpanded(expanded)); },
+    invalidate() {}, requestRender() {}, notify() {},
+  } };
+  await commands.get("cc-my-pi").handler("", ctx);
+  assert(panel.render(120).map(clean).join("\n").includes("Tool type colors"));
+  for (let i = 0; i < 3; i++) panel.handleInput("\x1b[B");
+  panel.handleInput("\r");
+  assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).toolTypeColors, true);
+  for (const [index, tool] of samples.entries()) {
+    assert.deepEqual(rows(tool), baseline[index]);
+    const prefix = view.colorToolText(tool.toolName, "COLOR").split("COLOR")[0];
+    assert(tool.render(100).join("\n").includes(prefix));
+    assert(tool.callRendererComponent.render(100).join("\n").includes(prefix));
+    assert.deepEqual(tool.resultRendererComponent.render(100), baselineResults[index]);
+    tool.setExpanded(true);
+    assert(tool.render(100).join("\n").includes(prefix));
+    tool.setExpanded(false);
+  }
+  // Conversation style is two rows above Tool type colors (after the footer row).
+  panel.handleInput("\x1b[A"); panel.handleInput("\x1b[A"); panel.handleInput("\r");
+  assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).conversationStyle, "claude");
+  for (const tool of samples) {
+    assert(tool.render(100).join("\n").includes(view.colorToolText(tool.toolName, "COLOR").split("COLOR")[0]));
+  }
+  panel.handleInput("\x1b[B"); panel.handleInput("\x1b[B"); panel.handleInput("\r");
+  assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).toolTypeColors, false);
+  samples.forEach((tool, index) => assert.deepEqual(tool.callRendererComponent.render(100), baselineCalls[index]));
+  panel.handleInput("\x1b[A"); panel.handleInput("\x1b[A"); panel.handleInput("\r");
+  const saved = JSON.parse(readFileSync(settingsPath, "utf8"));
+  assert.equal(saved.conversationStyle, "devin"); assert.equal(saved.unrelated, "preserve");
+  samples.forEach((tool, index) => assert.deepEqual(rows(tool), baseline[index]));
 });
 
 test("hooks survive reinstall and preserve normal-mode fallback", () => {

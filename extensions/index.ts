@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { readFile as readFileAsync } from "node:fs/promises";
 import { basename, dirname, extname, relative, resolve } from "node:path";
 import { homedir } from "node:os";
-import { installDevinView, resetDevinUserMessageTracking, setDevinUserMessagesExpanded } from "./devin-view.ts";
+import { colorToolText, installDevinView, resetDevinUserMessageTracking, setDevinUserMessagesExpanded, toolCallColorTheme } from "./devin-view.ts";
 
 import type {
 	BashToolDetails,
@@ -290,6 +290,8 @@ interface SettingsFile {
 	conversationStyle?: "claude" | "devin";
 	/** Show ask_user questions, submitted answers and notes in Devin mode. Defaults true. */
 	devinAskUserDetails?: boolean;
+	/** Fixed per-tool summary colors in both styles. Disabled by default. */
+	toolTypeColors?: boolean;
 	toolBackground?: "default" | "transparent" | "outlines" | "border";
 	readOutputMode?: "hidden" | "summary" | "preview";
 	searchOutputMode?: "hidden" | "count" | "preview";
@@ -3838,6 +3840,35 @@ function patchToolExecutionRenderers(): void {
 	proto[TOOL_EXECUTION_PATCH_FLAG] = true;
 }
 
+const TOOL_COLOR_CALL_HOOK = Symbol.for("cc-my-pi:tool-color-call-hook");
+const TOOL_COLOR_CALL_INSTALLED = Symbol.for("cc-my-pi:tool-color-call-installed");
+
+function patchToolCallColors(): void {
+	const proto = ToolExecutionComponent.prototype as any;
+	// Refresh the hook on reload rather than retaining an old settings closure.
+	proto[TOOL_COLOR_CALL_HOOK] = (renderer: any, name: string) => {
+		if (typeof renderer !== "function") return renderer;
+		return (args: any, theme: Theme, ctx: any) => {
+			const enabled = readSettings().toolTypeColors === true;
+			if (ctx?.state) {
+				if (ctx.state._ccToolColors !== enabled) {
+					delete ctx.state._callSummary;
+					delete ctx.state._callSummaryComplete;
+				}
+				ctx.state._ccToolColors = enabled;
+				ctx.state._ccToolName = name;
+			}
+			return renderer(args, enabled ? toolCallColorTheme(theme, name) : theme, ctx);
+		};
+	};
+	if (proto[TOOL_COLOR_CALL_INSTALLED]) return;
+	const original = proto.getCallRenderer;
+	proto.getCallRenderer = function () {
+		return proto[TOOL_COLOR_CALL_HOOK](original.call(this), this.toolName);
+	};
+	proto[TOOL_COLOR_CALL_INSTALLED] = true;
+}
+
 function shortPath(cwd: string, filePath: string): string {
 	if (!filePath) return "";
 	const rel = relative(cwd, filePath);
@@ -3917,7 +3948,10 @@ function activityToolCallText(
 		liveLineCountTrailing(ctx, theme),
 	);
 	if (!activity.detail) return header;
-	return `${header}\n${withBranch(theme.fg("muted", activity.detail), theme)}`;
+	const detail = ctx?.state?._ccToolColors === true
+		? colorToolText(ctx.state._ccToolName, activity.detail)
+		: theme.fg("muted", activity.detail);
+	return `${header}\n${withBranch(detail, theme)}`;
 }
 
 function liveLineCountTrailing(ctx: any, theme: Theme): string {
@@ -8426,10 +8460,12 @@ export default async function (pi: ExtensionAPI) {
 	patchPromptEditorRender();
 	patchAssistantMessages();
 	patchToolExecutionRenderers();
+	patchToolCallColors();
 	installDevinView({
 		enabled: devinViewEnabled,
 		theme: () => getGlobalPiTheme() as Theme,
 		askUserDetails: () => readSettings().devinAskUserDetails !== false,
+		toolColors: () => readSettings().toolTypeColors === true,
 		renderUserControl: (text, width) => claudeUserMessageLine(text, width, false),
 	});
 	pi.on("session_start", () => {
@@ -8495,6 +8531,7 @@ export default async function (pi: ExtensionAPI) {
 		return {
 			conversationStyle: settings.conversationStyle === "devin" ? "devin" : "claude",
 			devinAskUserDetails: settings.devinAskUserDetails !== false,
+			toolTypeColors: settings.toolTypeColors === true,
 			toolBackground,
 			groupToolCalls: toolGroupingEnabled(),
 			groupToolCallsAcrossTurns: groupToolCallsAcrossTurnsEnabled(),
@@ -8561,6 +8598,12 @@ export default async function (pi: ExtensionAPI) {
 			case "devinAskUserDetails": {
 				if (value !== "on" && value !== "off") return;
 				writeSettingsKey("devinAskUserDetails", value === "on");
+				refreshAllToolBranchVisuals(ctx);
+				break;
+			}
+			case "toolTypeColors": {
+				if (value !== "on" && value !== "off") return;
+				writeSettingsKey("toolTypeColors", value === "on");
 				refreshAllToolBranchVisuals(ctx);
 				break;
 			}

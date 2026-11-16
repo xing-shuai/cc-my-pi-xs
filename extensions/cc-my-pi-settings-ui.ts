@@ -11,6 +11,7 @@ import {
 	type SettingItem,
 } from "@earendil-works/pi-tui";
 import { COMPANION_PACKAGES } from "./companion-packages.ts";
+import { colorToolText } from "./devin-view.ts";
 
 export type ToolStyle = "outlines" | "transparent" | "default";
 export type BranchPreset = "theme" | "fixed-72" | "fixed-110" | "fixed-40";
@@ -20,6 +21,7 @@ export type BashOutputMode = "opencode" | "summary" | "preview";
 export interface CcToolsUiSnapshot {
 	conversationStyle: "claude" | "devin";
 	devinAskUserDetails: boolean;
+	toolTypeColors: boolean;
 	toolBackground: ToolStyle;
 	groupToolCalls: boolean;
 	groupToolCallsAcrossTurns: boolean;
@@ -90,6 +92,15 @@ export const SETTING_ORDER: Array<{
 		describe: (s) => s.devinAskUserDetails !== false
 			? "Devin: show each question, submitted answer and notes by default; omit unselected options."
 			: "Devin: keep ask_user as one compact row; Ctrl+O still reveals questions, answers and notes.",
+	},
+	{
+		id: "toolTypeColors",
+		label: "Tool type colors",
+		values: ["off", "on"],
+		current: (s) => s.toolTypeColors === true ? "on" : "off",
+		describe: (s) => s.toolTypeColors === true
+			? "Fixed per-tool summary, command and path colors in both styles; status, errors and diffs keep their colors."
+			: "Off by default: retain the existing tool colors in both conversation styles.",
 	},
 	{
 		id: "toolBackground",
@@ -542,7 +553,10 @@ function paintStandaloneTool(
 	summary: string,
 	body: string[],
 ): void {
-	lines.push(`${p.ok("●")} ${p.title(name)}(${p.accent(summary)})`);
+	const heading = snap.toolTypeColors === true
+		? colorToolText(name, `${name}(${summary})`)
+		: `${p.title(name)}(${p.accent(summary)})`;
+	lines.push(`${p.ok("●")} ${heading}`);
 	lines.push(...frameBody(snap, p, body));
 }
 
@@ -622,15 +636,16 @@ export function buildCcToolsPreview(
 	lines.push("");
 
 	if (snap.conversationStyle === "devin") {
+		const tool = (name: string, text: string) => snap.toolTypeColors === true ? colorToolText(name, text) : p.dim(text);
 		lines.push(p.muted("❯ Continue"), "", p.muted("Inspect the file, update it, then run tests."), "");
-		lines.push(" " + p.ok("✓") + p.dim(" Read ./src/auth.ts 53 lines"));
-		lines.push(" " + p.ok("✓") + p.dim(" Read lines 60-79 in ./src/app.ts 20 lines"));
+		lines.push(" " + p.ok("✓") + tool("read", " Read ./src/auth.ts 53 lines"));
+		lines.push(" " + p.ok("✓") + tool("read", " Read lines 60-79 in ./src/app.ts 20 lines"));
 		lines.push("", " Updated the implementation:", "");
-		lines.push(" " + p.ok("✓") + p.dim(" Edited ./src/auth.ts") + p.ok(" +16") + p.warn(" -2"));
-		lines.push(" " + p.ok("✓") + p.dim(" Edited ./src/app.ts") + p.ok(" +1") + p.warn(" -1"));
-		lines.push(" " + p.warn("×") + p.dim(" npm test"), p.warn("   Test failed: invalid token"));
-		lines.push(" " + p.accent("…") + p.dim(" npm test -- --retry"));
-		lines.push(" " + p.ok("✓") + p.dim(" ask_user"));
+		lines.push(" " + p.ok("✓") + tool("edit", " Edited ./src/auth.ts") + p.ok(" +16") + p.warn(" -2"));
+		lines.push(" " + p.ok("✓") + tool("edit", " Edited ./src/app.ts") + p.ok(" +1") + p.warn(" -1"));
+		lines.push(" " + p.warn("×") + tool("bash", " npm test"), p.warn("   Test failed: invalid token"));
+		lines.push(" " + p.accent("…") + tool("bash", " npm test -- --retry"));
+		lines.push(" " + p.ok("✓") + tool("ask_user", " ask_user"));
 		if (snap.devinAskUserDetails !== false) {
 			lines.push("   " + p.muted("问题 1：发布前需要人工确认吗？"));
 			lines.push("   回答：需要人工确认");
@@ -651,6 +666,7 @@ export function buildCcToolsPreview(
 	// Footer chips — always reflect every setting so nothing is "invisible".
 	const chips = [
 		`style=${snap.toolBackground}`,
+		`toolColors=${boolLabel(snap.toolTypeColors === true)}`,
 		`group=${boolLabel(snap.groupToolCalls)}`,
 		`detail=${boolLabel(snap.extraToolOutputExpanded)}`,
 		`branch=${snap.branchPreset}`,
