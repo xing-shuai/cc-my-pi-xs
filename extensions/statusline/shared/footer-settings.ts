@@ -19,7 +19,7 @@ export const FOOTER_ITEMS = {
   mcp: { label: "MCP 状态", icon: "⌘" },
 } as const;
 export type FooterItemKey = keyof typeof FOOTER_ITEMS;
-export type FooterConfig = Record<FooterItemKey, { enabled: boolean; icon: string }>;
+export type FooterConfig = Record<FooterItemKey, { enabled: boolean; icon: string; showBar?: boolean }>;
 
 export function readFooterConfig(): FooterConfig {
   let raw: any = {};
@@ -31,6 +31,7 @@ export function readFooterConfig(): FooterConfig {
     const value = raw[key];
     return [key, {
       enabled: typeof value?.enabled === "boolean" ? value.enabled : true,
+      ...(key === "context" ? { showBar: value?.showBar === true } : {}),
       icon: typeof value?.icon === "string" && !/[\x00-\x1f\x7f-\x9f]/u.test(value.icon) && [...value.icon].length <= 8 ? value.icon : item.icon,
     }];
   })) as FooterConfig;
@@ -47,9 +48,11 @@ export async function openFooterSettings(ctx: any, pi: any): Promise<void> {
     const index = choices.indexOf(selected);
     if (index < 0) return;
     const key = keys[index];
-    const action = await ctx.ui.select(FOOTER_ITEMS[key].label, [config[key].enabled ? "隐藏" : "显示", "修改图标", "恢复默认图标"]);
+    const barAction = config.context.showBar ? "Hide visual bar" : "Show visual bar";
+    const action = await ctx.ui.select(FOOTER_ITEMS[key].label, [config[key].enabled ? "隐藏" : "显示", "修改图标", "恢复默认图标", ...(key === "context" ? [barAction] : [])]);
     if (!action) continue;
-    if (action === "隐藏" || action === "显示") config[key].enabled = action === "显示";
+    if (key === "context" && action === barAction) config.context.showBar = !config.context.showBar;
+    else if (action === "隐藏" || action === "显示") config[key].enabled = action === "显示";
     else if (action === "恢复默认图标") config[key].icon = FOOTER_ITEMS[key].icon;
     else {
       const icon = await ctx.ui.input("输入图标（最多 8 个字符，留空表示无图标）", config[key].icon);

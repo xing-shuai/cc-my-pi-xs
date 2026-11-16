@@ -374,6 +374,50 @@ test("telemetry uses CJK-aware live estimates and excludes tool gaps from final 
   assert.equal(tracker.handle({ type: "agent_settled" }).tps, 100);
 });
 
+test("context footer bar defaults off, toggles manually and uses green-yellow-red in both styles", async () => {
+  const { readFooterConfig, openFooterSettings } = load(join(root, "statusline/shared/footer-settings.ts"));
+  const { emptyModelInfoState, MODEL_INFO_CHANNEL } = load(join(root, "statusline/shared/dashboard-state.ts"));
+  const register = load(join(root, "statusline/ui-customization/index.ts")).default;
+  const bus = new EventEmitter(), handlers = new Map();
+  const api = { events: { on: (name, fn) => { bus.on(name, fn); return () => bus.off(name, fn); }, emit: (name, value) => bus.emit(name, value) }, on: (name, fn) => handlers.set(name, fn) };
+  let footer, selections = [];
+  const ctx = { mode: "tui", hasUI: true, cwd: process.cwd(), ui: {
+    setFooter(factory) { if (factory) footer = factory({ children: [], requestRender() {} }, theme, { getExtensionStatuses: () => new Map() }); },
+    setHeader() {}, setTitle() {}, select: async () => selections.shift(), notify(text) { throw new Error(text); },
+  } };
+  mkdirSync(join(homedir(), ".pi/agent"), { recursive: true });
+  register(api, { skipHeader: true });
+  handlers.get("session_start")({}, ctx);
+  const update = (percent) => bus.emit(MODEL_INFO_CHANNEL, { ...emptyModelInfoState(), contextPercent: percent, contextTokens: 90000, contextWindow: 300000 });
+  try {
+    assert.equal(readFooterConfig().context.showBar, false);
+    update(30);
+    assert.match(clean(footer.render(300)[0]), /30%.*90k\/300k/);
+    assert(!/[█░▕▏]/.test(clean(footer.render(300)[0])));
+    const plainCwd = join(fixture, "plain-footer");
+    mkdirSync(join(plainCwd, ".pi"), { recursive: true });
+    writeFileSync(join(plainCwd, ".pi/settings.json"), JSON.stringify({ statuslineCtxStyle: "plain" }));
+    for (const [cwd, colors] of [[process.cwd(), ["\x1b[0;1;38;2;166;227;161m", "\x1b[0;1;38;2;249;226;175m", "\x1b[0;1;38;2;243;139;168m"]], [plainCwd, ["success", "warning", "error"]]]) {
+      ctx.cwd = cwd;
+      for (const [index, percent] of [0, 59, 60, 79, 80, 100].entries()) {
+        update(percent);
+        const color = colors[Math.floor(index / 2)];
+        assert(footer.render(300)[0].includes(cwd === plainCwd ? theme.fg(color, `${percent}%`) : `${color}${percent}%`));
+      }
+      for (const action of ["Show visual bar", "Hide visual bar"]) {
+        selections = [`● 上下文  [▣]`, action];
+        await openFooterSettings(ctx, api);
+        const enabled = action === "Show visual bar";
+        assert.equal(readFooterConfig().context.showBar, enabled);
+        update(30);
+        const rendered = footer.render(300)[0];
+        assert.equal(/[█░▕▏]/.test(clean(rendered)), enabled);
+        assert.match(clean(rendered), /30%.*90k\/300k/);
+      }
+    }
+  } finally { handlers.get("session_shutdown")({}, ctx); }
+});
+
 test("footer defaults and package identity preserve independent-fork boundaries", () => {
   const { readFooterConfig } = load(join(root, "statusline/shared/footer-settings.ts"));
   assert.equal(readFooterConfig().model.icon, "◇");

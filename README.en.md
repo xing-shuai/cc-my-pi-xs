@@ -47,7 +47,7 @@ The three panels show synthetic examples of:
 
 ![Actual footer rendering and per-item visibility/icon settings](assets/screenshots/footer-settings.png)
 
-The separate workspace-path / Git-branch row is hidden. Use `/cc-my-pi footer` to change each item's visibility and icon independently. These components target **Pi's terminal TUI**; web clients do not automatically inherit them.
+The separate workspace-path / Git-branch row is hidden. Use `/cc-my-pi footer` to change each item's visibility and icon independently. The context percentage and token counts remain visible, but its visual bar is **off by default**; select the context item → **Show visual bar** to enable it (or **Hide visual bar** to disable it). Context usage is green below 60%, yellow at 60–79%, and red from 80%, in both footer styles. These components target **Pi's terminal TUI**; web clients do not automatically inherit them.
 
 ## What changes compared with upstream?
 

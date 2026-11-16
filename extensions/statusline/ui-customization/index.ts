@@ -91,8 +91,6 @@ const TEXT = "\x1b[0;1;38;2;205;214;244m";
 const MAUVE = "\x1b[0;1;38;2;203;166;247m";
 const GREEN = "\x1b[0;1;38;2;166;227;161m";
 const YELLOW = "\x1b[0;1;38;2;249;226;175m";
-const PEACH = "\x1b[0;1;38;2;250;179;135m";
-const MAROON = "\x1b[0;1;38;2;235;160;172m";
 const RED = "\x1b[0;1;38;2;243;139;168m";
 const SKY = "\x1b[0;1;38;2;137;220;235m";
 
@@ -159,9 +157,7 @@ function formatTokens(tokens: number) {
 }
 
 function contextColor(theme: ExtensionContext["ui"]["theme"], percent: number) {
-  if (percent < 20) return (text: string) => theme.fg("success", text);
-  if (percent < 40) return (text: string) => theme.fg("warning", text);
-  if (percent < 60) return (text: string) => theme.fg("accent", text);
+  if (percent < 60) return (text: string) => theme.fg("success", text);
   if (percent < 80) return (text: string) => theme.fg("warning", text);
   return (text: string) => theme.fg("error", text);
 }
@@ -172,10 +168,8 @@ function progressBar(percent: number, cells = 6) {
 }
 
 function ctxRampAnsi(pct: number) {
-  if (pct < 20) return GREEN;
-  if (pct < 40) return YELLOW;
-  if (pct < 60) return PEACH;
-  if (pct < 80) return MAROON;
+  if (pct < 60) return GREEN;
+  if (pct < 80) return YELLOW;
   return RED;
 }
 
@@ -375,15 +369,17 @@ export default function uiCustomization(
             modelInfo.contextTokens === null ? "?" : formatTokens(modelInfo.contextTokens);
           const contextWindow =
             modelInfo.contextWindow > 0 ? formatTokens(modelInfo.contextWindow) : "?";
+          const showContextBar = footerConfig.context.showBar === true;
           const context =
             modelInfo.contextPercent === null
               ? gray("ctx —")
               : claude
                 ? (() => {
                     const ramp = ctxRampAnsi(percent);
-                    return `${GRAY}ctx ▕${ramp}${smoothBar(percent)}${GRAY}▏ ${ramp}${percent}%${GRAY} · ${contextTokens}/${contextWindow}${RESET}`;
+                    const bar = showContextBar ? `▕${ramp}${smoothBar(percent)}${GRAY}▏ ` : "";
+                    return `${GRAY}ctx ${bar}${ramp}${percent}%${GRAY} · ${contextTokens}/${contextWindow}${RESET}`;
                   })()
-                : `${theme.fg("dim", "ctx ▕")}${colorContext(progressBar(percent))}${theme.fg("dim", "▏")} ${colorContext(`${percent}%`)} ${theme.fg("dim", `· ${contextTokens}/${contextWindow}`)}`;
+                : `${theme.fg("dim", "ctx ")}${showContextBar ? `${theme.fg("dim", "▕")}${colorContext(progressBar(percent))}${theme.fg("dim", "▏ ")}` : ""}${colorContext(`${percent}%`)} ${theme.fg("dim", `· ${contextTokens}/${contextWindow}`)}`;
           const tps =
             modelInfo.tokensPerSecond === null
               ? "— tok/s"
