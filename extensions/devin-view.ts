@@ -1,6 +1,6 @@
 import { stripVTControlCharacters } from "node:util";
 import { isAbsolute, relative } from "node:path";
-import { AssistantMessageComponent, ToolExecutionComponent, UserMessageComponent, type Theme } from "@earendil-works/pi-coding-agent";
+import { AssistantMessageComponent, CustomMessageComponent, ToolExecutionComponent, UserMessageComponent, type Theme } from "@earendil-works/pi-coding-agent";
 import { Spacer, Text, sliceByColumn, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 
 const PARENT = Symbol.for("pi-claude-style-tools:component-parent");
@@ -11,6 +11,7 @@ const MESSAGE_HOOK = Symbol.for("cc-my-pi:devin-message-layout-hook");
 const MESSAGE_INSTALLED = Symbol.for("cc-my-pi:devin-message-layout-installed");
 const DOTTED_HOOK = Symbol.for("cc-my-pi:devin-paragraph-hook");
 const MESSAGE_MODE = Symbol.for("cc-my-pi:devin-message-mode");
+const PROCESS_SPACING = Symbol.for("cc-my-pi:devin-process-spacing");
 const MESSAGE_CACHE = Symbol.for("pi-claude-style-tools:message-render-cache");
 const THINKING_HOOK = Symbol.for("cc-my-pi:devin-thinking-hook");
 const THINKING_LAYOUT = Symbol.for("cc-my-pi:devin-thinking-layout");
@@ -268,6 +269,19 @@ function transcript(component: any): boolean {
   return component instanceof ToolExecutionComponent || component instanceof AssistantMessageComponent || component instanceof UserMessageComponent;
 }
 
+function isProcessNotification(component: any): boolean {
+  return component instanceof CustomMessageComponent && (component as any).message?.customType === "ad-process:notification";
+}
+
+function compactProcessSpacing(component: any): boolean {
+  return isProcessNotification(component) && isProcessNotification(neighbor(component, -1));
+}
+
+function isProcessNotificationSpacer(spacer: any): boolean {
+  const parent = spacer[PARENT];
+  return parent?.children?.[0] === spacer && compactProcessSpacing(parent);
+}
+
 export function isDevinToolSeparator(spacer: any): boolean {
   return neighbor(spacer, -1) instanceof ToolExecutionComponent && neighbor(spacer, 1) instanceof ToolExecutionComponent;
 }
@@ -372,10 +386,19 @@ export function installDevinView(options: DevinViewOptions): void {
   const assistantProto = AssistantMessageComponent.prototype as any;
   // Neutralize the first version's post-render hook when upgrading a live session.
   assistantProto[OLD_ASSISTANT_HOOK] = (lines: string[]) => lines;
-  for (const MessageClass of [AssistantMessageComponent, UserMessageComponent]) {
+  for (const MessageClass of [AssistantMessageComponent, UserMessageComponent, CustomMessageComponent]) {
     const proto = MessageClass.prototype as any;
     proto[MESSAGE_HOOK] = (component: any, _width: number, original: () => string[]) => {
       const enabled = options.enabled();
+      if (component instanceof CustomMessageComponent) {
+        const compact = enabled && compactProcessSpacing(component);
+        // The cached row count depends on the preceding visible message.
+        if (component[PROCESS_SPACING] !== compact) {
+          delete component[MESSAGE_CACHE];
+          component[PROCESS_SPACING] = compact;
+        }
+        return original();
+      }
       if (component instanceof UserMessageComponent) (component as any)[USER_FOLD] = undefined;
       if (component[MESSAGE_MODE] !== enabled) {
         delete component[MESSAGE_CACHE];
@@ -424,7 +447,7 @@ export function installDevinView(options: DevinViewOptions): void {
   }
 
   const spacerProto = Spacer.prototype as any;
-  spacerProto[SPACER_HOOK] = (spacer: any) => options.enabled() && isTranscriptSeparator(spacer);
+  spacerProto[SPACER_HOOK] = (spacer: any) => options.enabled() && (isTranscriptSeparator(spacer) || isProcessNotificationSpacer(spacer));
   if (!spacerProto[INSTALLED]) {
     const original = spacerProto.render;
     spacerProto.render = function (width: number) {

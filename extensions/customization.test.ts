@@ -73,6 +73,55 @@ test("process summaries distinguish background submission from completion", () =
   assert(!view.devinToolSummary(pending).includes("Submitted"));
 });
 
+const processNotification = (label = "Log match", onClick = () => {}, customType = "ad-process:notification") => new host.CustomMessageComponent(
+  { role: "custom", customType, content: label, display: true, timestamp: 0 },
+  (_message, options) => {
+    const body = new tui.Container();
+    body.addChild(new tui.Text(label, options.outputPad ?? 0, 0));
+    if (options.expanded) {
+      body.addChild(new tui.Spacer(1));
+      body.addChild(new tui.Text("Preserved expanded detail", 0, 0));
+    }
+    body.handleMouse = (event) => { onClick(event); return { handled: true }; };
+    return body;
+  },
+);
+
+test("consecutive process notifications have no blank rows and preserve expanded click layout", () => {
+  const parent = new tui.Container();
+  let clicked;
+  const first = processNotification(), second = processNotification("Completed", (event) => { clicked = event; });
+  parent.addChild(first); parent.addChild(second);
+  assert.equal(rows(first)[0], "");
+  assert.deepEqual(rows(second).map((line) => line.trim()), ["Completed"]);
+  assert.equal(rows(parent).filter((line) => !line.trim()).length, 1);
+  second.handleMouse({ type: "click", button: "left", x: 2, y: 0, screenX: 2, screenY: 2, width: 100, height: 1, shift: false, alt: false, ctrl: false });
+  assert.equal(clicked?.y, 0);
+  second.setExpanded(true);
+  assert.deepEqual(rows(second).map((line) => line.trim()), ["Completed", "", "Preserved expanded detail"]);
+});
+
+test("process spacing follows visible neighbors and preserves unrelated custom messages", () => {
+  const parent = new tui.Container(), first = processNotification(), second = processNotification("Completed");
+  assert.equal(rows(second)[0], ""); // Warm the standalone custom-message cache.
+  parent.addChild(first); parent.addChild(second);
+  assert.equal(rows(second).length, 1);
+  parent.removeChild(first);
+  assert.equal(rows(second)[0], "");
+  parent.removeChild(second); parent.addChild(first);
+  const unrelated = processNotification("Unrelated note", () => {}, "other:notification");
+  parent.addChild(unrelated); parent.addChild(second);
+  assert.equal(rows(unrelated)[0], "");
+  assert.equal(rows(second)[0], "");
+  parent.removeChild(unrelated);
+  assert.equal(rows(second).length, 1);
+  const hidden = new host.AssistantMessageComponent(message([{ type: "thinking", thinking: "hidden" }]), true);
+  parent.removeChild(second); parent.addChild(hidden); parent.addChild(second);
+  assert.equal(rows(second).length, 1);
+  hidden.setHideThinkingBlock(false);
+  assert.equal(rows(second)[0], "");
+});
+
 test("read ranges, edit counts and multiline shell summaries stay compact", () => {
   const read = makeTool("read", { path: join(process.cwd(), "sample.ts"), offset: 20, limit: 3 }, {}, "a\nb\nc");
   assert.equal(view.devinToolSummary(read), "Read lines 20-22 in ./sample.ts 3 lines");
@@ -158,7 +207,15 @@ test("hooks survive reinstall and preserve normal-mode fallback", () => {
   view.installDevinView({ ...options, enabled: () => false });
   assert(!rows(user).some((line) => line.includes("展开剩余")));
   assert(rows(user).length >= 20);
+  const parent = new tui.Container(), first = processNotification(), second = processNotification("Completed");
+  parent.addChild(first); parent.addChild(second);
+  assert.equal(rows(second)[0], "");
+  view.installDevinView(options); view.installDevinView(options);
+  assert.equal(rows(second).length, 1);
+  view.installDevinView({ ...options, enabled: () => false });
+  assert.equal(rows(second)[0], "");
   view.installDevinView(options);
+  assert.equal(rows(second).length, 1);
 });
 
 test("telemetry uses CJK-aware live estimates and excludes tool gaps from final rate", () => {
