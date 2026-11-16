@@ -119,10 +119,12 @@ test("process spacing stays compact across neighbors and preserves unrelated cus
   parent.removeChild(second); parent.addChild(hidden); parent.addChild(second);
   assert.equal(rows(second).length, 1);
   hidden.setHideThinkingBlock(false);
+  assert.equal(rows(second)[0], "");
+  hidden.setHideThinkingBlock(true);
   assert.equal(rows(second).length, 1);
 });
 
-test("process events have no gaps at tool and assistant boundaries", () => {
+test("activity rows stay compact and assistant prose has one blank line on each side", () => {
   const prose = () => new host.AssistantMessageComponent(message([{ type: "text", text: "Status update." }]), true);
   const tool = () => makeTool("read", { path: "status.json" }, {}, "ok");
   for (const before of [prose, tool]) {
@@ -132,9 +134,23 @@ test("process events have no gaps at tool and assistant boundaries", () => {
       parent.addChild(processNotification()); parent.addChild(new tui.Spacer(1)); parent.addChild(after());
       const lines = rows(parent);
       assert(lines.some((line) => line.includes("Log match")));
-      assert(lines.every((line) => line.trim()), JSON.stringify(lines));
+      const index = lines.findIndex((line) => line.includes("Log match"));
+      assert.equal(lines[index - 1] === "", before === prose);
+      assert.equal(lines[index + 1] === "", after === prose);
+      assert.equal(lines.filter((line) => !line.trim()).length, Number(before === prose) + Number(after === prose));
     }
   }
+});
+
+test("a process event after prose keeps its leading row in mouse layout", () => {
+  const parent = new tui.Container();
+  let clicked;
+  parent.addChild(new host.AssistantMessageComponent(message([{ type: "text", text: "Status update." }]), true));
+  const event = processNotification("Completed", (mouse) => { clicked = mouse; });
+  parent.addChild(event);
+  assert.deepEqual(rows(event).map((line) => line.trim()), ["", "Completed"]);
+  event.handleMouse({ type: "click", button: "left", x: 2, y: 1, screenX: 2, screenY: 2, width: 100, height: 2, shift: false, alt: false, ctrl: false });
+  assert.equal(clicked?.y, 0);
 });
 
 test("process boundaries preserve blank lines inside assistant prose", () => {
@@ -142,8 +158,11 @@ test("process boundaries preserve blank lines inside assistant prose", () => {
   const baseline = rows(new host.AssistantMessageComponent(content, true));
   const parent = new tui.Container(), assistant = new host.AssistantMessageComponent(content, true);
   parent.addChild(processNotification()); parent.addChild(new tui.Spacer(1)); parent.addChild(assistant);
-  assert.deepEqual(rows(assistant), baseline);
-  assert.equal(rows(parent).length, baseline.length + 1);
+  assert.deepEqual(rows(assistant), ["", ...baseline]);
+  const last = processNotification("Completed");
+  parent.addChild(new tui.Spacer(1)); parent.addChild(last);
+  assert.deepEqual(rows(last).map((line) => line.trim()), ["", "Completed"]);
+  assert.equal(rows(parent).length, baseline.length + 4);
 });
 
 test("read ranges, edit counts and multiline shell summaries stay compact", () => {

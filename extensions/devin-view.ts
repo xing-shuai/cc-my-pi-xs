@@ -273,9 +273,19 @@ function isProcessNotification(component: any): boolean {
   return component instanceof CustomMessageComponent && (component as any).message?.customType === "ad-process:notification";
 }
 
+function isActivityRow(component: any): boolean {
+  return component instanceof ToolExecutionComponent || isProcessNotification(component);
+}
+
+function compactProcessSpacing(component: any): boolean {
+  if (!isProcessNotification(component)) return false;
+  const previous = neighbor(component, -1);
+  return !transcript(previous) || isActivityRow(previous);
+}
+
 function isProcessNotificationSpacer(spacer: any): boolean {
   const parent = spacer[PARENT];
-  return parent?.children?.[0] === spacer && isProcessNotification(parent);
+  return parent?.children?.[0] === spacer && compactProcessSpacing(parent);
 }
 
 export function isDevinToolSeparator(spacer: any): boolean {
@@ -290,8 +300,8 @@ function isTranscriptSeparator(spacer: any): boolean {
 function boundary(component: any, lines: string[]): string[] {
   if (!lines.length) return lines;
   const previous = neighbor(component, -1);
-  if (!transcript(previous) || isProcessNotification(previous) || isProcessNotification(component)) return lines;
-  return component instanceof ToolExecutionComponent && previous instanceof ToolExecutionComponent ? lines : ["", ...lines];
+  if (!transcript(previous)) return lines;
+  return isActivityRow(component) && isActivityRow(previous) ? lines : ["", ...lines];
 }
 
 function trimPadding(lines: string[]): string[] {
@@ -387,8 +397,8 @@ export function installDevinView(options: DevinViewOptions): void {
     proto[MESSAGE_HOOK] = (component: any, _width: number, original: () => string[]) => {
       const enabled = options.enabled();
       if (component instanceof CustomMessageComponent) {
-        const compact = enabled && isProcessNotification(component);
-        // The cached row count changes when the no-gap process mode changes.
+        const compact = enabled && compactProcessSpacing(component);
+        // Prose boundaries and mode changes affect the cached row count.
         if (component[PROCESS_SPACING] !== compact) {
           delete component[MESSAGE_CACHE];
           component[PROCESS_SPACING] = compact;
