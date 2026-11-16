@@ -92,34 +92,58 @@ test("consecutive process notifications have no blank rows and preserve expanded
   let clicked;
   const first = processNotification(), second = processNotification("Completed", (event) => { clicked = event; });
   parent.addChild(first); parent.addChild(second);
-  assert.equal(rows(first)[0], "");
+  assert.equal(rows(first).length, 1);
   assert.deepEqual(rows(second).map((line) => line.trim()), ["Completed"]);
-  assert.equal(rows(parent).filter((line) => !line.trim()).length, 1);
+  assert.equal(rows(parent).filter((line) => !line.trim()).length, 0);
   second.handleMouse({ type: "click", button: "left", x: 2, y: 0, screenX: 2, screenY: 2, width: 100, height: 1, shift: false, alt: false, ctrl: false });
   assert.equal(clicked?.y, 0);
   second.setExpanded(true);
   assert.deepEqual(rows(second).map((line) => line.trim()), ["Completed", "", "Preserved expanded detail"]);
 });
 
-test("process spacing follows visible neighbors and preserves unrelated custom messages", () => {
+test("process spacing stays compact across neighbors and preserves unrelated custom messages", () => {
   const parent = new tui.Container(), first = processNotification(), second = processNotification("Completed");
-  assert.equal(rows(second)[0], ""); // Warm the standalone custom-message cache.
+  assert.equal(rows(second).length, 1); // Warm the standalone custom-message cache.
   parent.addChild(first); parent.addChild(second);
   assert.equal(rows(second).length, 1);
   parent.removeChild(first);
-  assert.equal(rows(second)[0], "");
+  assert.equal(rows(second).length, 1);
   parent.removeChild(second); parent.addChild(first);
   const unrelated = processNotification("Unrelated note", () => {}, "other:notification");
   parent.addChild(unrelated); parent.addChild(second);
   assert.equal(rows(unrelated)[0], "");
-  assert.equal(rows(second)[0], "");
+  assert.equal(rows(second).length, 1);
   parent.removeChild(unrelated);
   assert.equal(rows(second).length, 1);
   const hidden = new host.AssistantMessageComponent(message([{ type: "thinking", thinking: "hidden" }]), true);
   parent.removeChild(second); parent.addChild(hidden); parent.addChild(second);
   assert.equal(rows(second).length, 1);
   hidden.setHideThinkingBlock(false);
-  assert.equal(rows(second)[0], "");
+  assert.equal(rows(second).length, 1);
+});
+
+test("process events have no gaps at tool and assistant boundaries", () => {
+  const prose = () => new host.AssistantMessageComponent(message([{ type: "text", text: "Status update." }]), true);
+  const tool = () => makeTool("read", { path: "status.json" }, {}, "ok");
+  for (const before of [prose, tool]) {
+    for (const after of [prose, tool]) {
+      const parent = new tui.Container();
+      parent.addChild(before()); parent.addChild(new tui.Spacer(1));
+      parent.addChild(processNotification()); parent.addChild(new tui.Spacer(1)); parent.addChild(after());
+      const lines = rows(parent);
+      assert(lines.some((line) => line.includes("Log match")));
+      assert(lines.every((line) => line.trim()), JSON.stringify(lines));
+    }
+  }
+});
+
+test("process boundaries preserve blank lines inside assistant prose", () => {
+  const content = message([{ type: "text", text: "First paragraph.\n\nSecond paragraph." }]);
+  const baseline = rows(new host.AssistantMessageComponent(content, true));
+  const parent = new tui.Container(), assistant = new host.AssistantMessageComponent(content, true);
+  parent.addChild(processNotification()); parent.addChild(new tui.Spacer(1)); parent.addChild(assistant);
+  assert.deepEqual(rows(assistant), baseline);
+  assert.equal(rows(parent).length, baseline.length + 1);
 });
 
 test("read ranges, edit counts and multiline shell summaries stay compact", () => {

@@ -266,20 +266,16 @@ function neighbor(component: any, step: 1 | -1): any {
 }
 
 function transcript(component: any): boolean {
-  return component instanceof ToolExecutionComponent || component instanceof AssistantMessageComponent || component instanceof UserMessageComponent;
+  return component instanceof ToolExecutionComponent || component instanceof AssistantMessageComponent || component instanceof UserMessageComponent || isProcessNotification(component);
 }
 
 function isProcessNotification(component: any): boolean {
   return component instanceof CustomMessageComponent && (component as any).message?.customType === "ad-process:notification";
 }
 
-function compactProcessSpacing(component: any): boolean {
-  return isProcessNotification(component) && isProcessNotification(neighbor(component, -1));
-}
-
 function isProcessNotificationSpacer(spacer: any): boolean {
   const parent = spacer[PARENT];
-  return parent?.children?.[0] === spacer && compactProcessSpacing(parent);
+  return parent?.children?.[0] === spacer && isProcessNotification(parent);
 }
 
 export function isDevinToolSeparator(spacer: any): boolean {
@@ -294,7 +290,7 @@ function isTranscriptSeparator(spacer: any): boolean {
 function boundary(component: any, lines: string[]): string[] {
   if (!lines.length) return lines;
   const previous = neighbor(component, -1);
-  if (!transcript(previous)) return lines;
+  if (!transcript(previous) || isProcessNotification(previous) || isProcessNotification(component)) return lines;
   return component instanceof ToolExecutionComponent && previous instanceof ToolExecutionComponent ? lines : ["", ...lines];
 }
 
@@ -391,8 +387,8 @@ export function installDevinView(options: DevinViewOptions): void {
     proto[MESSAGE_HOOK] = (component: any, _width: number, original: () => string[]) => {
       const enabled = options.enabled();
       if (component instanceof CustomMessageComponent) {
-        const compact = enabled && compactProcessSpacing(component);
-        // The cached row count depends on the preceding visible message.
+        const compact = enabled && isProcessNotification(component);
+        // The cached row count changes when the no-gap process mode changes.
         if (component[PROCESS_SPACING] !== compact) {
           delete component[MESSAGE_CACHE];
           component[PROCESS_SPACING] = compact;
