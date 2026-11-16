@@ -55,6 +55,7 @@ The separate workspace-path / Git-branch row is hidden. Use `/cc-my-pi footer` t
 | --- | --- |
 | Optional Devin mode | One-line tool summaries and consistent left margins; no gaps between consecutive tools, one blank row at text boundaries; original Claude mode and saved preferences remain available |
 | Tool summaries | Dim actions, commands, paths, and line counts; Read shows returned ranges/counts; Edit shows colored additions/deletions; multiline shell commands show the first line and remaining-line count |
+| Background process calls | In Devin mode, successful starts show `↗ Submitted to background`, not task completion; other actions use explicit background-process labels. Pairs with the [pi-processes UI fork](https://github.com/xing-shuai/pi-processes). |
 | Thinking placeholders | In Devin mode, hides all collapsed inline `Thinking...` rows and their empty space; keeps the separate bottom working animation; Ctrl+T still reveals reasoning |
 | Long user messages | In Devin mode, messages over 8 rendered rows fold to 6; click controls and keyboard commands expand them without changing source text, session records, or model context |
 | `ask_user` details | In Devin mode, shows questions, submitted answers, and question/option notes by default; omits unselected options; a setting disables automatic details while Ctrl+O still expands them |

@@ -94,6 +94,16 @@ export function devinToolParts(tool: any): Part[] {
   const file = (action: string): Part[] => [part(action + (path ? " " : "")), part(path, "dim")];
   let parts: Part[];
   switch (name) {
+    case "process": {
+      const actions: Record<string, string> = {
+        start: done ? "Submitted to background" : "Submit to background",
+        list: "List background processes", output: "Read background logs", stop: "Stop background process",
+        update: "Update background watches", write: "Write background input", clear: "Clear background history",
+      };
+      const action = actions[plain(args.action)] ?? "Background process";
+      const target = plain(args.name ?? tool.result?.details?.process?.name ?? args.id);
+      return [part(action), ...(target ? [part(` · ${target}`, "dim")] : [])];
+    }
     case "bash": case "shell": case "exec_command": {
       const command = String(args.command ?? args.cmd ?? name).replace(/\r\n/g, "\n").trim();
       const lines = command.split("\n");
@@ -137,8 +147,10 @@ export function renderDevinTool(tool: any, width: number, theme: Theme): string[
   if (tool.hideComponent) return [];
   const failed = tool.result?.isError === true;
   const complete = Boolean(tool.result) && tool.isPartial !== true;
-  const color = failed ? "error" : complete ? "success" : tool.executionStarted ? "accent" : "dim";
-  const icon = failed ? "×" : complete ? "✓" : tool.executionStarted ? "…" : "○";
+  // A successful start call means submitted, not that its process succeeded.
+  const submitted = complete && !failed && tool.toolName === "process" && tool.args?.action === "start";
+  const color = failed ? "error" : submitted ? "accent" : complete ? "success" : tool.executionStarted ? "accent" : "dim";
+  const icon = failed ? "×" : submitted ? "↗" : complete ? "✓" : tool.executionStarted ? "…" : "○";
   const body = devinToolParts(tool).map((part) => theme.fg(part.tone === "text" ? "dim" : part.tone, part.text)).join("");
   const lines = [truncateToWidth(` ${theme.fg(color, icon)} ${body}`, width, "…")];
   if (failed) {

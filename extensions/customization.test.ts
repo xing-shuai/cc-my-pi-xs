@@ -53,6 +53,26 @@ const askDetails = { mode: "submit", cancelled: false, questions: askArgs.questi
   release: { indices: [0], labels: ["人工确认"], values: ["manual"], note: "先预览再发布", optionNotes: { manual: "保留人工修改" } },
 } };
 
+test("process summaries distinguish background submission from completion", () => {
+  const args = { action: "start", name: "cold-floor-retry", command: "DO_NOT_SHOW_COMMAND" };
+  const tool = { toolName: "process", args, result: { content: [], details: {} }, isPartial: false };
+  assert.equal(view.devinToolSummary(tool), "Submitted to background · cold-floor-retry");
+  const submitted = view.renderDevinTool(tool, 100, theme).map(clean).join("\n");
+  assert.match(submitted, /↗ Submitted to background/);
+  assert(!submitted.includes("✓"));
+  assert(!submitted.includes(args.command));
+  assert.match(rows(makeTool("process", args)).join("\n"), /↗ Submitted to background/);
+  for (const action of ["list", "output", "stop", "update", "write", "clear"]) {
+    const summary = view.devinToolSummary({ ...tool, args: { action, id: "proc_1" } });
+    assert(!summary.startsWith("process"));
+    assert(summary.includes("background"));
+  }
+  const failed = { ...tool, result: { isError: true, content: [{ type: "text", text: "spawn failed" }] } };
+  assert.match(view.renderDevinTool(failed, 100, theme).map(clean).join("\n"), /×.*\n.*spawn failed/);
+  const pending = { ...tool, result: undefined, executionStarted: true, isPartial: true };
+  assert(!view.devinToolSummary(pending).includes("Submitted"));
+});
+
 test("read ranges, edit counts and multiline shell summaries stay compact", () => {
   const read = makeTool("read", { path: join(process.cwd(), "sample.ts"), offset: 20, limit: 3 }, {}, "a\nb\nc");
   assert.equal(view.devinToolSummary(read), "Read lines 20-22 in ./sample.ts 3 lines");
