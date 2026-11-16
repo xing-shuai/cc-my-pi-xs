@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { readFile as readFileAsync } from "node:fs/promises";
 import { basename, dirname, extname, relative, resolve } from "node:path";
 import { homedir } from "node:os";
-import { colorToolText, installDevinView, resetDevinUserMessageTracking, setDevinUserMessagesExpanded, toolCallColorTheme } from "./devin-view.ts";
+import { installDevinView, resetDevinUserMessageTracking, setDevinUserMessagesExpanded, toolCallColorTheme, toolDisplayName } from "./devin-view.ts";
 
 import type {
 	BashToolDetails,
@@ -290,7 +290,7 @@ interface SettingsFile {
 	conversationStyle?: "claude" | "devin";
 	/** Show ask_user questions, submitted answers and notes in Devin mode. Defaults true. */
 	devinAskUserDetails?: boolean;
-	/** Fixed per-tool summary colors in both styles. Disabled by default. */
+	/** Fixed tool-name colors in both styles. Disabled by default. */
 	toolTypeColors?: boolean;
 	toolBackground?: "default" | "transparent" | "outlines" | "border";
 	readOutputMode?: "hidden" | "summary" | "preview";
@@ -3940,18 +3940,16 @@ function activityToolCallText(
 	const action = pending ? activity.active : activity.past;
 	const noun = activity.count === 1 ? activity.noun : activity.plural;
 	const label = `${action} ${activity.count} ${noun}${pending ? "…" : ""}`;
+	const namesOnly = ctx?.state?._ccToolColors === true;
 	const header = toolHeader(
-		label,
+		namesOnly ? toolDisplayName(ctx.state._ccToolName) : label,
 		"",
 		theme,
 		toolStatusDot(ctx, theme),
 		liveLineCountTrailing(ctx, theme),
-	);
+	) + (namesOnly ? theme.fg("muted", ` ${activity.count} ${noun}${pending ? "…" : ""}`) : "");
 	if (!activity.detail) return header;
-	const detail = ctx?.state?._ccToolColors === true
-		? colorToolText(ctx.state._ccToolName, activity.detail)
-		: theme.fg("muted", activity.detail);
-	return `${header}\n${withBranch(detail, theme)}`;
+	return `${header}\n${withBranch(theme.fg("muted", activity.detail), theme)}`;
 }
 
 function liveLineCountTrailing(ctx: any, theme: Theme): string {

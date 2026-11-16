@@ -11,7 +11,7 @@ import {
 	type SettingItem,
 } from "@earendil-works/pi-tui";
 import { COMPANION_PACKAGES } from "./companion-packages.ts";
-import { colorToolText } from "./devin-view.ts";
+import { colorToolText, renderNamedToolText } from "./devin-view.ts";
 
 export type ToolStyle = "outlines" | "transparent" | "default";
 export type BranchPreset = "theme" | "fixed-72" | "fixed-110" | "fixed-40";
@@ -99,7 +99,7 @@ export const SETTING_ORDER: Array<{
 		values: ["off", "on"],
 		current: (s) => s.toolTypeColors === true ? "on" : "off",
 		describe: (s) => s.toolTypeColors === true
-			? "Fixed per-tool summary, command and path colors in both styles; status, errors and diffs keep their colors."
+			? "Fixed colors for tool names only in both styles; commands, paths and content keep their existing styling."
 			: "Off by default: retain the existing tool colors in both conversation styles.",
 	},
 	{
@@ -554,7 +554,7 @@ function paintStandaloneTool(
 	body: string[],
 ): void {
 	const heading = snap.toolTypeColors === true
-		? colorToolText(name, `${name}(${summary})`)
+		? `${colorToolText(name, name)}(${p.accent(summary)})`
 		: `${p.title(name)}(${p.accent(summary)})`;
 	lines.push(`${p.ok("●")} ${heading}`);
 	lines.push(...frameBody(snap, p, body));
@@ -636,7 +636,8 @@ export function buildCcToolsPreview(
 	lines.push("");
 
 	if (snap.conversationStyle === "devin") {
-		const tool = (name: string, text: string) => snap.toolTypeColors === true ? colorToolText(name, text) : p.dim(text);
+		const tool = (name: string, text: string) => snap.toolTypeColors === true
+			? " " + renderNamedToolText(name, text.trimStart(), p.dim) : p.dim(text);
 		lines.push(p.muted("❯ Continue"), "", p.muted("Inspect the file, update it, then run tests."), "");
 		lines.push(" " + p.ok("✓") + tool("read", " Read ./src/auth.ts 53 lines"));
 		lines.push(" " + p.ok("✓") + tool("read", " Read lines 60-79 in ./src/app.ts 20 lines"));

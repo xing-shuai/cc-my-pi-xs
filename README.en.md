@@ -55,7 +55,7 @@ The separate workspace-path / Git-branch row is hidden. Use `/cc-my-pi footer` t
 | --- | --- |
 | Optional Devin mode | One-line tool summaries and consistent left margins; no gaps between consecutive tools, one blank row at text boundaries; original Claude mode and saved preferences remain available |
 | Tool summaries | Dim actions, commands, paths, and line counts by default; Read shows returned ranges/counts; Edit shows colored additions/deletions; multiline shell commands show the first line and remaining-line count |
-| Optional tool colors | **Off by default.** Fixed per-tool colors for individual call summaries, commands, and paths in both Devin and Claude modes; status icons, errors, output bodies, and green/red diffs retain their semantic colors |
+| Optional tool colors | **Off by default.** Fixed colors for tool names only in both Devin and Claude modes; commands, paths, content, status icons, errors, and green/red diffs keep their existing styling |
 | Background process calls | In Devin mode, successful starts show `↗ Submitted to background`, not task completion; other actions use explicit background-process labels. Tool rows and process notifications remain compact in Devin mode, with one blank line above and below assistant prose; expanded details retain their internal spacing. Pairs with the [pi-processes UI fork](https://github.com/xing-shuai/pi-processes). |
 | Thinking placeholders | In Devin mode, hides all collapsed inline `Thinking...` rows and their empty space; keeps the separate bottom working animation; Ctrl+T still reveals reasoning |
 | Long user messages | In Devin mode, messages over 8 rendered rows fold to 6; click controls and keyboard commands expand them without changing source text, session records, or model context |
@@ -115,7 +115,7 @@ This is only a minimal package-entry example. Reload Pi after editing extension 
 
 1. **Enable compact mode:** `/cc-my-pi` → **Conversation style** → `devin`.
 2. **Disable automatic question details:** `/cc-my-pi` → **Ask User details** → `off`. Set it back to `on` to restore them.
-3. **Optional tool colors:** `/cc-my-pi` → **Tool type colors** → `on`. Defaults to `off`; applies immediately in both styles. The core palette and stable fallback colors for other tool names stay the same across themes.
+3. **Optional tool colors:** `/cc-my-pi` → **Tool type colors** → `on`. Defaults to `off`; colors only tool names, not commands, paths, or content, and applies immediately in both styles. The core palette and stable fallback colors for other tool names stay the same across themes.
 4. **Tool details:** Ctrl+O. It also reveals questions and answers when automatic details are disabled.
 5. **Reasoning:** Ctrl+T. Hiding placeholders does not delete reasoning records.
 6. **Long messages:** click the expand/collapse control, or use the `user` commands above when mouse routing is unavailable. Ctrl+O does not control user-message folding.

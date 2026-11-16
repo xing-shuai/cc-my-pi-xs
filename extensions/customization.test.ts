@@ -186,7 +186,7 @@ test("tool type colors use a fixed palette without recoloring semantic roles", (
   const colored = view.toolCallColorTheme(theme, "read");
   assert.equal(colored, view.toolCallColorTheme(theme, "read"));
   assert.equal(colored.fg("toolTitle", "Read"), view.colorToolText("read", "Read"));
-  assert.equal(colored.fg("accent", "src/app.ts"), view.colorToolText("read", "src/app.ts"));
+  assert.equal(colored.fg("accent", "src/app.ts"), theme.fg("accent", "src/app.ts"));
   assert.equal(colored.fg("toolTitle", theme.bold("Read")), view.colorToolText("read", theme.bold("Read")));
   for (const [tone, text] of [["success", "+16"], ["error", "-2"], ["warning", "warning"], ["accent", "●"], ["muted", "output"], ["dim", "context"]]) {
     assert.equal(colored.fg(tone, text), theme.fg(tone, text));
@@ -207,10 +207,13 @@ test("Devin tool colors preserve text, statuses, diff counts, errors and narrow 
     const original = view.renderDevinTool(tool, 100, theme);
     assert.deepEqual(view.renderDevinTool(tool, 100, theme, false), original);
     const colored = view.renderDevinTool(tool, 100, theme, true);
-    assert.deepEqual(colored.map(clean), original.map(clean));
+    assert.deepEqual(colored.map(clean), original.map(clean).map((line) => line
+      .replace("✓ npm test", "✓ Bash npm test").replace("✓ Edited", "✓ Edit").replace("↗ Submitted", "↗ Process Submitted")));
     assert(colored.join("\n").includes(view.colorToolText(tool.toolName, "COLOR").split("COLOR")[0]));
     for (const width of [1, 8, 20, 80]) assert(view.renderDevinTool(tool, width, theme, true).every((line) => tui.visibleWidth(line) <= width));
   }
+  assert(view.renderDevinTool(samples[0], 100, theme, true)[0].includes(theme.fg("dim", "sample.ts")));
+  assert(view.renderDevinTool(samples[1], 100, theme, true)[0].includes(theme.fg("dim", " npm test")));
   const edit = view.renderDevinTool(samples[2], 100, theme, true)[0];
   assert(edit.includes(theme.fg("success", " +16")));
   assert(edit.includes(theme.fg("error", " -2")));
@@ -307,7 +310,8 @@ test("tool type colors default off and toggle live in both styles through settin
   panel.handleInput("\r");
   assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).toolTypeColors, true);
   for (const [index, tool] of samples.entries()) {
-    assert.deepEqual(rows(tool), baseline[index]);
+    assert.deepEqual(rows(tool), baseline[index].map((line) => line.replace("✓ npm test", "✓ Bash npm test")));
+    assert.deepEqual(tool.callRendererComponent.render(100).slice(1), baselineCalls[index].slice(1));
     const prefix = view.colorToolText(tool.toolName, "COLOR").split("COLOR")[0];
     assert(tool.render(100).join("\n").includes(prefix));
     assert(tool.callRendererComponent.render(100).join("\n").includes(prefix));

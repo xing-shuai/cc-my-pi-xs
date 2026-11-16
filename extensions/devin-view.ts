@@ -65,7 +65,27 @@ export function colorToolText(name: string, text: string): string {
   return `${fg}${body}\x1b[39m`;
 }
 
-/** Color call headings/arguments only, never result output or diff colors. */
+const TOOL_LABELS: Record<string, [string, RegExp]> = {
+  read: ["Read", /^Read\b/], edit: ["Edit", /^(?:Edited|Edit)\b/],
+  write: ["Write", /^(?:Wrote|Write)\b/], ls: ["Ls", /^List\b/],
+  grep: ["Grep", /^(?:Searched for|Search for)\b/], find: ["Find", /^Find\b/],
+  apply_patch: ["Apply Patch", /^(?:Patched|Patch)\b/],
+  bash: ["Bash", /^$/], shell: ["Bash", /^$/], exec_command: ["Bash", /^$/],
+  process: ["Process", /^$/],
+};
+
+export function toolDisplayName(name: string): string {
+  return Object.hasOwn(TOOL_LABELS, name) ? TOOL_LABELS[name][0] : name;
+}
+
+export function renderNamedToolText(name: string, text: string, dim: (text: string) => string): string {
+  const detail = Object.hasOwn(TOOL_LABELS, name)
+    ? text.replace(TOOL_LABELS[name][1], "")
+    : text.startsWith(name) ? text.slice(name.length).trimStart() : text;
+  return colorToolText(name, toolDisplayName(name)) + (detail ? dim(/^\s/.test(detail) ? detail : ` ${detail}`) : "");
+}
+
+/** Color tool names only; arguments, output and semantic colors stay unchanged. */
 export function toolCallColorTheme(theme: Theme, name: string): Theme {
   let byName = callThemes.get(theme);
   if (!byName) { byName = new Map(); callThemes.set(theme, byName); }
@@ -75,7 +95,7 @@ export function toolCallColorTheme(theme: Theme, name: string): Theme {
     get(target, property) {
       if (property === "fg") return (tone: Parameters<Theme["fg"]>[0], text: string) => {
         const statusOnly = /^[✓✔✕×✗●○…↗■!·\s]+$/.test(stripVTControlCharacters(text));
-        return (tone === "toolTitle" || tone === "accent") && !statusOnly
+        return tone === "toolTitle" && !statusOnly
           ? colorToolText(name, text) : target.fg(tone, text);
       };
       const value = Reflect.get(target, property, target);
@@ -202,9 +222,9 @@ export function renderDevinTool(tool: any, width: number, theme: Theme, toolColo
   const submitted = complete && !failed && tool.toolName === "process" && tool.args?.action === "start";
   const color = failed ? "error" : submitted ? "accent" : complete ? "success" : tool.executionStarted ? "accent" : "dim";
   const icon = failed ? "×" : submitted ? "↗" : complete ? "✓" : tool.executionStarted ? "…" : "○";
-  const body = devinToolParts(tool).map((part) =>
-    toolColors && (part.tone === "text" || part.tone === "dim")
-      ? colorToolText(tool.toolName, part.text)
+  const body = devinToolParts(tool).map((part, index) =>
+    toolColors && index === 0
+      ? renderNamedToolText(tool.toolName, part.text, (text) => theme.fg("dim", text))
       : theme.fg(part.tone === "text" ? "dim" : part.tone, part.text)).join("");
   const lines = [truncateToWidth(` ${theme.fg(color, icon)} ${body}`, width, "…")];
   if (failed) {
